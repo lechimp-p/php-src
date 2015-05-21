@@ -33,6 +33,7 @@ class Src {
      * @param   string          $name
      * @param   Closure|null    $construct 
      * @throws  Exceptions/UnknownService
+     * @throws  Exceptions/UnresolvableDependency
      * @return  mixed
      */
     public function service($name, Closure $construct = null) {
@@ -65,10 +66,18 @@ class Src {
      *
      * @param   string          $name
      * @param   mixed           ...     Parameters for class construction.
+     * @throws  Exceptions/UnknownClass
      * @return  mixed
      */
     public function construct($name) {
+        if (!array_key_exists($name, $this->constructors)) {
+            throw new Exceptions\UnknownClass($name);
+        }
+
         $args = func_get_args();
+        $args[0] = $this;
+        $construct = $this->constructors[$name];
+        return call_user_func_array($construct, $args);
     }
 
     /*********************
