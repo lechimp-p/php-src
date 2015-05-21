@@ -46,6 +46,16 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $src->service("foo");
     }
 
+    public function testRequestServiceTwice() {
+        $src = $this->src
+        ->service("foo", function($src) {
+            return new StdClass();
+        });
+        $one = $src->service("foo");
+        $two= $src->service("foo");
+        $this->assertSame($one, $two);
+    }
+
     /**
      * @expectedException Lechimp\Src\Exceptions\UnknownService
      */
@@ -88,7 +98,7 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
     public function testIdenticalServiceAfterSrcUpdate() {
         $src = $this->src
         ->service("foo", function($src) {
-            return new stdClass;
+            return new StdClass;
         });
 
         $one = $src->service("foo");
@@ -98,7 +108,7 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return "bar";
         });
 
-        $two = $src->service("foo");
+        $two = $src2->service("foo");
         $this->assertSame($one, $two);
     }
 }
