@@ -45,21 +45,51 @@ class Src {
         }
     }
 
+    /**
+     * Register a constructor for a class.
+     *
+     * On construction with build , gives src and parameters to 
+     * 
+     * @param   string          $name
+     * @param   Closure         $construct
+     * @return  Src
+     */
+    public function constructorFor($name, Closure $construct) {
+        $constructors = array_merge(array(), $this->constructors); 
+        $constructors[$name] = $construct;
+        return $this->newSrc($this->services, $constructors);
+    }
+
+    /**
+     * Create a new object.
+     *
+     * @param   string          $name
+     * @param   mixed           ...     Parameters for class construction.
+     * @return  mixed
+     */
+    public function construct($name) {
+        $args = func_get_args();
+    }
+
     /*********************
      * Internals 
      *********************/
     protected $services = array();
+    protected $constructors = array();
 
     // For construction:
 
-    public function __construct(array &$services = null) {
+    public function __construct(array &$services = null, array &$constructors = null) {
         if ($services) {
             $this->services = $services;
         }
+        if ($constructors) {
+            $this->constructors = $constructors;
+        }
     }
 
-    protected function newSrc(array &$services) {
-        return new Src($services);
+    protected function newSrc(array &$services, array &$constructors) {
+        return new Src($services, $constructors);
     }
 
     // For service: 
@@ -68,7 +98,7 @@ class Src {
         $services = array_merge(array(), $this->services); // shallow copy    
         $entry = array( "construct" => $construct );
         $services[$name] = $entry;
-        return $this->newSrc($services);
+        return $this->newSrc($services, $this->constructors);
     }
 
     protected function requestService($name) {
@@ -77,7 +107,7 @@ class Src {
         }
 
         if (array_key_exists("service", $this->services[$name])) {
-            return $this->services[$name];
+            return $this->services[$name]["service"];
         }
 
         return $this->initializeService($name);
