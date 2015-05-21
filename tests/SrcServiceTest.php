@@ -36,12 +36,36 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("bar", $src->service("bar"));
     }
 
+    public function testPassesSrc() {
+        $tmp = array();
+        $src = $this->src
+        ->service("foo", function($src) use (&$tmp) {
+            $this->assertSame($tmp["src"], $src);
+        });
+        $tmp["src"] = $src;
+        $src->service("foo");
+    }
+
     /**
      * @expectedException Lechimp\Src\Exceptions\UnknownService
      */
     public function testUnknownService() {
         $this->src->service("foo"); 
     }
+
+    /**
+     * @expectedException Lechimp\Src\Exceptions\UnresolvableDependency
+     */
+    public function testUnresolvableDependency() {
+        $this->src
+        ->service("foo", function($src) {
+            $src->service("bar");
+        })
+        ->service("bar", function($src) {
+            $src->service("foo");
+        });
+    }
+
 
     public function testIsImmutable() {
         $src = $this->src
