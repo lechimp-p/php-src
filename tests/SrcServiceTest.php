@@ -84,4 +84,21 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         }
         $this->assertTrue($raised);
     }
+
+    public function testIdenticalServiceAfterSrcUpdate() {
+        $src = $this->src
+        ->service("foo", function($src) {
+            return new stdClass;
+        });
+
+        $one = $src->service("foo");
+
+        $src2 = $this->src
+        ->service("bar", function($src) {
+            return "bar";
+        });
+
+        $two = $src->service("foo");
+        $this->assertSame($one, $two);
+    }
 }
