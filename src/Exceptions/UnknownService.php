@@ -14,6 +14,6 @@ namespace Lechimp\Src\Exceptions;
 use Exception;
 
 class UnknownService extends Exception {
-    class __construct($service_name) {
+    public function __construct($service_name) {
     }
 }

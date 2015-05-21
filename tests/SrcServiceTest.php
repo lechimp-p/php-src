@@ -57,13 +57,14 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
      * @expectedException Lechimp\Src\Exceptions\UnresolvableDependency
      */
     public function testUnresolvableDependency() {
-        $this->src
+        $src = $this->src
         ->service("foo", function($src) {
             $src->service("bar");
         })
         ->service("bar", function($src) {
             $src->service("foo");
         });
+        $src->service("foo");
     }
 
 
