@@ -103,7 +103,7 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
 
         $one = $src->service("foo");
 
-        $src2 = $this->src
+        $src2 = $src
         ->service("bar", function($src) {
             return "bar";
         });
