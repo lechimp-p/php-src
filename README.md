@@ -46,6 +46,12 @@ really effective if it is used throughout the system.
 
 ### Relation to Autoloading
 
+### Set Dependency Once or Modify Later
+
 ### Long-Term Development
+
+### Initialisation and Configuration
+
+### Should Src be the only global or be passed explicitly
 
 ## Usage
