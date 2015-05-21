@@ -43,4 +43,11 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
         $inst2 = $this->src->construct("Foo", "a", "b");
         $this->assertNotSame($inst1, $inst2);
     }
+
+    /**
+     * @expectedException Lechimp\Src\Exceptions\UnknownClass
+     */
+    public function testUnknownClass() {
+        $this->src->construct("Bar");
+    }
 }
