@@ -18,8 +18,8 @@ the style of `require_once` then `new`.
 
 In my work with the Open Source LMS ILIAS, i need to deal with a very large and
 tangled code base (aka a Big Ball of Mud), that makes it hard to understand,
-modify and test the system. As i want this code needs to transition to a less 
-dependent and more modular state, i figured that some crucial tasks are to:
+modify and test the system. As i want this code to transition to a less 
+interdependent and more modular state, i figured that some crucial tasks are to:
 
 * get rid of globals
 * make it possible to slip in custom classes in existing code
@@ -125,8 +125,79 @@ in a transition.
 The library therefore should document a clear transition strategy and should 
 also offer tooling to assist in the transition.
 
-### Initialisation and Configuration
-
 ### Should Src be the only global or be passed explicitly?
 
+There seem to be two options when it comes to a registry like this library
+wants to provide: there could be one global object, or the registry needs to
+be given to the objects somehow, in order to query for services or create new
+objects.
+
+In the long run it seems to be desirable to explictly pass a registry to every
+object, as it isolates an object from global state more. For the sake of
+easy introduction, the replacement of many globals with a single global registry
+seems to be far easier.
+
+The transition strategy therefore should show a clean way to first replace globals
+with a global registry and afterwards get rid of the global registry.
+
+### Immutable Implementation
+
 ## Usage
+
+### Src Object
+
+The `Src` object provides the main service of this libray:
+
+```php
+<?php
+
+// This should use some sensible alternative for real code:
+require_once("tests/autoloader.php");
+use Lechimp\Src\Src;
+
+$src = new Src();
+
+?>
+```
+
+As it acts for a source of services and fresh objects, its interface provides
+methods for those tasks. Let's look at the interface for services first. New 
+services are registered via the `service` method, which is provided with a name
+for the service and a constructor to create the service:
+
+```php
+<?php
+
+class Math {
+    public function pi() {
+        return 3.14159265359;
+    }
+}
+
+$src = $src->service("Math", function(Src $src) {
+    return new Math();
+});
+
+?>
+```
+
+This tells the source how to create a service `Math`. The service is not created
+immediately, but rather on the first request for the service. This is done by
+invoking the registered constructor with the `Src` as only argument. The 
+passing of the source object makes it possible to query dependencies of the math
+service before it is actually initialized.
+
+To request a service from the source, the `service` method is invoked with a
+single argument for the name that is requested:
+
+```php
+<?php
+
+$math = $src->service("Math");
+assert($math instanceof Math);
+
+echo "Shows pi in some precision: " . $math->pi() . "\n";
+assert((int)$math->pi() == 3);
+
+?>
+```
