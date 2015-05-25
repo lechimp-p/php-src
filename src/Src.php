@@ -58,7 +58,26 @@ class Src {
     public function constructorFor($name, Closure $construct) {
         $constructors = array_merge(array(), $this->constructors); 
         $constructors[$name] = $construct;
-        return $this->newSrc($this->services, $constructors);
+        return $this->newSrc( $this->services
+                            , $constructors
+                            , $this->default_constructor);
+    }
+
+    /**
+     * Register a default constructor for classes.
+     *
+     * This constructor is used, when no constructor for a class could be 
+     * found. The closure must be a function taking the Src and the class
+     * name as arguments, followed by an array of parameters for the class 
+     * constructor.
+     *
+     * @param   Closure         $construct
+     * @return  Src
+     */
+    public function defaultConstructor(Closure $construct) {
+        return $this->newSrc( $this->services
+                            , $this->constructors
+                            , $construct);
     }
 
     /**
@@ -70,14 +89,17 @@ class Src {
      * @return  mixed
      */
     public function construct($name) {
-        if (!array_key_exists($name, $this->constructors)) {
-            throw new Exceptions\UnknownClass($name);
-        }
-
         $args = func_get_args();
-        $args[0] = $this;
-        $construct = $this->constructors[$name];
-        return call_user_func_array($construct, $args);
+        try {
+            return $this->constructNamed($name, $args);
+        }
+        catch (Exceptions\UnknownClass $e) {
+            if (!$this->default_constructor) {
+                throw $e;
+            }
+
+            return $this->constructDefault($name, $args);
+        }
     }
 
     /*********************
@@ -85,20 +107,29 @@ class Src {
      *********************/
     protected $services = array();
     protected $constructors = array();
+    protected $default_constructor = null;
 
     // For construction:
 
-    public function __construct(array &$services = null, array &$constructors = null) {
+    public function __construct( array &$services = null
+                               , array &$constructors = null
+                               , Closure $default_constructor = null) {
         if ($services) {
             $this->services = $services;
         }
         if ($constructors) {
             $this->constructors = $constructors;
         }
+        if ($default_constructor) {
+            $this->default_constructor = $default_constructor;
+        }
     }
 
-    protected function newSrc(array &$services, array &$constructors) {
-        return new Src($services, $constructors);
+    protected function newSrc( array &$services
+                             , array &$constructors
+                             , $default_constructor) {
+        assert($default_constructor instanceof Closure || $default_constructor === null);
+        return new Src($services, $constructors, $default_constructor);
     }
 
     // For service: 
@@ -107,7 +138,9 @@ class Src {
         $services = array_merge(array(), $this->services); // shallow copy    
         $entry = array( "construct" => $construct );
         $services[$name] = $entry;
-        return $this->newSrc($services, $this->constructors);
+        return $this->newSrc( $services
+                            , $this->constructors
+                            , $this->default_constructor);
     }
 
     protected function requestService($name) {
@@ -135,5 +168,24 @@ class Src {
         $this->services[$name]["service"] = $service;
 
         return $service;
+    }
+
+    // For constructiom
+
+    public function constructNamed($name, &$args) {
+        if (!array_key_exists($name, $this->constructors)) {
+            throw new Exceptions\UnknownClass($name);
+        }
+
+        $args[0] = $this;
+        $construct = $this->constructors[$name];
+        return call_user_func_array($construct, $args);
+    }
+
+    public function constructDefault($name, &$args) {
+        unset($args[0]);
+        $args = array_values($args);
+        $def = $this->default_constructor;
+        return $def($this, $name, $args);
     }
 }

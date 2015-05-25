@@ -53,6 +53,43 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
         $tmp["src"] = $src; 
 
         $src->construct("Bar");
+
+        $this->assertSame($src, $tmp["src"]);
+    }
+
+    public function testDefaultConstructor() {
+        $tmp = array( "called" => false );
+        $src = (new Lechimp\Src\Src())
+        ->defaultConstructor(function($src, $class_name, $params) use (&$tmp) {
+            $tmp["called"] = true;
+            $this->assertEquals("Foo", $class_name);
+            $this->assertEquals("a", $params[0]);
+            $this->assertEquals("b", $params[1]);
+        });
+        $src->construct("Foo", "a", "b");
+        $this->assertTrue($tmp["called"]);
+    }
+
+    public function testNamedBeforeDefaultConstructor() {
+        $tmp = array( "called" => false);
+        $src = $this->src
+        ->defaultConstructor(function($src, $class_name, $params) use ($tmp) {
+            $tmp["called"] = false;
+        }); 
+        $src->construct("Foo", "a", "b");
+        $this->assertFalse($tmp["called"]);
+    }
+
+    public function testPassesSrcToDefaultConstructor() {
+        $tmp = array();
+        $src = $this->src
+        ->defaultConstructor(function($src, $class_name, $params) use (&$tmp) {
+            $this->assertSame($src, $tmp["src"]);
+        });
+        $tmp["src"] = $src; 
+        $src->construct("Bar");
+
+        $this->assertSame($src, $tmp["src"]);
     }
 
     /**
