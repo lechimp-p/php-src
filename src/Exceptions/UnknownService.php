@@ -1,7 +1,7 @@
 <?php
 /******************************************************************************
  * php-src - A library that handles creation of objects and management of 
- * global services to help you refactor your legacy code base
+ * global services to help you refactor your legacy code base.
  *
  * Copyright (c) 2014 Richard Klees <richard.klees@rwth-aachen.de>
  *
