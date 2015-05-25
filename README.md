@@ -108,9 +108,22 @@ As this library aims to help to improve legacy code, we could neverthelesss
 not assume that autoloading is easily possible in a code base where this library
 should be introduced.
 
-### Set Dependency Once or Modify Later
+Thus the library should be agnostic to the question whether autoloading is
+used or not.
 
-### Long-Term Development
+### Long Term Development
+
+This library wants to help to make code bases better. Thus it must provide an
+easy way to be introduced to existing projects as well as a long term strategy to
+stear projects towards a better state and keep them in that state when it is
+reached.
+
+This seems to interfere with the requirement to be able to coexist with existing
+solutions, as it must be possible to deal with situations where the project is
+in a transition.
+
+The library therefore should document a clear transition strategy and should 
+also offer tooling to assist in the transition.
 
 ### Initialisation and Configuration
 
