@@ -142,6 +142,25 @@ with a global registry and afterwards get rid of the global registry.
 
 ### Immutable Implementation
 
+In the long run, this library aims to completely remove all globals from a code
+base and replace them by queries to an explicitly passed source. The library
+furthermore aims to provide a strategy that helps to decouple the components
+of a system. When passing the source of services and objects from one component
+to another explicitly, subtle bugs could be introduced when one component updates
+the source and other components rely on that source.
+
+Therefore the service and object source provided by this library is implemented
+as an immutable object, where updates on the source do not mutate the object 
+the update is made on, but rather create a new object with the changes applied.
+
+This also keeps the possibility to let the source be updated by another 
+component, but this has to be done explitly by letting the updating component
+return a new source.
+
+This will lead to a performance penalty when creating an initial source for the
+system. This penalty could be avoided by introducing a builder for the initial
+source.
+
 ## Usage
 
 ### Src Object
@@ -161,9 +180,12 @@ $src = new Src();
 ```
 
 As it acts for a source of services and fresh objects, its interface provides
-methods for those tasks. Let's look at the interface for services first. New 
-services are registered via the `service` method, which is provided with a name
-for the service and a constructor to create the service:
+methods for those tasks. Let's look at the interface for services first. 
+
+#### Services
+
+New services are registered via the `service` method, which is provided with a 
+name for the service and a constructor to create the service:
 
 ```php
 <?php
@@ -194,10 +216,33 @@ single argument for the name that is requested:
 <?php
 
 $math = $src->service("Math");
-assert($math instanceof Math);
 
-echo "Shows pi in some precision: " . $math->pi() . "\n";
+assert($math instanceof Math);
 assert((int)$math->pi() == 3);
+
+?>
+```
+
+As outlined in the considerations, an original source is not destroyed on updates
+to it, but rather creates a new version of itself:
+
+```php
+<?php
+
+$src2 = $src->service("Foo", function(Src $src) {
+    return "Foo";
+});
+
+$has_raised = false;
+try {
+    $src->service("Foo");
+}
+catch (Lechimp\Src\Exceptions\UnknownService $e) {
+    $has_raised = true;
+}
+
+assert($src2 != $src);
+assert($has_raised);
 
 ?>
 ```
