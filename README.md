@@ -87,12 +87,26 @@ and is less explicit as its functionality is hidden in typehints or annotions.
 I consider **Explicit is better than implicit!** (thanks [Python](http://www.python.org)!)
 a valuable approach, especially when it comes to huge systems with lots of
 contributors with different experiences. The dependency declaration approach
-furthemore seems to be buildable on the querying approach, if one really wants
-to take that direction.
+also seems to be buildable on the query approach, if one really wants to take 
+that direction.
 
 This library therefore takes the road of querying for dependencies. 
 
 ### Relation to Autoloading
+
+The problems this library aims to solve a connected to autoloading, as this
+library deals with creating objects, while autoloading deals with loading source
+code for a requested class. The problem autoloading solves somehow comes before
+the problems this library solves, as we surely need to load some sourcecode
+before we could create a class.
+
+In an optimal scenario, autoloading and this library should be completely
+orthagonal to each other, the further only dealing with loading of source files
+and the latter only dealing with class creation.
+
+As this library aims to help to improve legacy code, we could neverthelesss
+not assume that autoloading is easily possible in a code base where this library
+should be introduced.
 
 ### Set Dependency Once or Modify Later
 
