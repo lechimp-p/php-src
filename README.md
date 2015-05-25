@@ -59,7 +59,38 @@ I furthermore consider **Make invalid states unrepresentable!** a great
 guideline to ease the use of a system, as one could always use an existing 
 object without some `if ($object->isValid()) ...`-pattern.
 
-### Explicit Dependency Declaration vs. Implicit Querying for Dependencies
+This lets constructor injection appear to be the better option.
+
+### Dependency Declaration vs. Querying for Dependencies
+
+Some DI-frameworks (e.g. [PHP-DI](http://php-di.org), [Dice](https://r.je/dice.html)
+take the approach to inject dependencies either based on type hints on the 
+parameters of an object constructor or based on annotations to the constructor
+or class. I call this approach dependency declaration, as the required 
+dependencies are declared upfront and the framework takes care to inject them
+correctly.
+
+Another approach is taken by [Pimple](http://pimple.sensiolabs.org), where a
+consumer has to query for a dependency by it's name.
+
+The dependency declaration approach seems to lead to a less code that needs to
+be written by a consumer, where the querying approach seems to be a little more
+verbose.
+
+On the opposite, the declaration approach makes it necessary to do some 
+inspection of class constructors or annotations at runtime, thus bearing more
+overhead.
+
+Furthermore the declaration approach requires more magic from the framework
+and is less explicit as its functionality is hidden in typehints or annotions.
+
+I consider **Explicit is better than implicit!** (thanks [Python](http://www.python.org)!)
+a valuable approach, especially when it comes to huge systems with lots of
+contributors with different experiences. The dependency declaration approach
+furthemore seems to be buildable on the querying approach, if one really wants
+to take that direction.
+
+This library therefore takes the road of querying for dependencies. 
 
 ### Relation to Autoloading
 
