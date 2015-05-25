@@ -9,7 +9,7 @@ to help you refactor your legacy code base**
 
 ## Is this a DI-Container, a Lib for Factories or what?
 
-This library acts as a source for objects, no matter wether they are global
+This library acts as a source for objects, no matter whether they are global
 services or should be newly created. It's purpose is to help to decouple legacy
 code bases, where services are introduced as globals and objects are created in
 the style of `require_once` then `new`. 
@@ -42,6 +42,23 @@ really effective if it is used throughout the system.
 
 ### Setter Injection vs. Constructor Injection
 
+Setter Injection is technique to inject dependencies of objects to the object
+via setters on the object. With constructor injection, the dependencies are
+passed to the constructor of an object.
+
+Constructor injection provides the benefit, that it is impossible to create
+an object in an not completely initialized state. With setter injection this
+could happen easily if one forgets to set a dependency after construction. 
+
+In the setter injection scenario this could be circumvented by setting a default
+dependency on a global. I consider this an unsatisfying approach, as it could
+potentially lead to hidden dependencies on globals, circumventing the aims of
+this library.
+
+I furthermore consider **Make invalid states unrepresentable!** a great 
+guideline to ease the use of a system, as one could always use an existing 
+object without some `if ($object->isValid()) ...`-pattern.
+
 ### Explicit Dependency Declaration vs. Implicit Querying for Dependencies
 
 ### Relation to Autoloading
@@ -52,6 +69,6 @@ really effective if it is used throughout the system.
 
 ### Initialisation and Configuration
 
-### Should Src be the only global or be passed explicitly
+### Should Src be the only global or be passed explicitly?
 
 ## Usage
