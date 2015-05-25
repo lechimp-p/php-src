@@ -132,7 +132,7 @@ class Src {
         return new Src($services, $constructors, $default_constructor);
     }
 
-    // For service: 
+    // For services: 
 
     protected function registerService($name, Callable $construct) {
         $services = array_merge(array(), $this->services); // shallow copy    
@@ -170,7 +170,7 @@ class Src {
         return $service;
     }
 
-    // For constructiom
+    // For construction:
 
     public function constructNamed($name, &$args) {
         if (!array_key_exists($name, $this->constructors)) {
