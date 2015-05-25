@@ -98,4 +98,39 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
     public function testUnknownClass() {
         $this->src->construct("Bar");
     }
+
+    public function testIsImmutable() {
+        $src = $this->src
+        ->constructorFor("Bar", function($src) {
+            return "foo";
+        });
+
+        $this->assertNotSame($src, $this->src);
+        try {
+            $this->src->construct("Bar");
+            $raised = false;
+        }
+        catch (Lechimp\Src\Exceptions\UnknownClass $e) {
+            $raised = true;
+        }
+        $this->assertTrue($raised);
+    }
+
+    public function testIsImmutableAfterDefaultConstructorUpdate() {
+        $src = $this->src
+        ->defaultConstructor(function($src, $class_name, $args) {
+            return "foo";
+        });
+
+        $this->assertNotSame($src, $this->src);
+        try {
+            $this->src->construct("Bar");
+            $raised = false;
+        }
+        catch (Lechimp\Src\Exceptions\UnknownClass $e) {
+            $raised = true;
+        }
+        $this->assertTrue($raised);
+    }
+
 }
