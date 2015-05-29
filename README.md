@@ -12,7 +12,8 @@ to help you refactor your legacy code base**
 This library acts as a source for objects, no matter whether they are global
 services or should be newly created. It's purpose is to help to decouple legacy
 code bases, where services are introduced as globals and objects are created in
-the style of `require_once` then `new`. 
+the style of `require_once` then `new`. So this is neither a factory library
+nor an DI-container but has a functionality that overlaps with both.
 
 ## Rationale
 
@@ -210,7 +211,7 @@ passing of the source object makes it possible to query dependencies of the math
 service before it is actually initialized.
 
 To request a service from the source, the `service` method is invoked with a
-single argument for the name that is requested:
+single argument for the name of the service that is requested:
 
 ```php
 <?php
@@ -243,6 +244,70 @@ catch (Lechimp\Src\Exceptions\UnknownService $e) {
 
 assert($src2 != $src);
 assert($has_raised);
+assert($src2->service("Foo") == "Foo");
 
 ?>
 ```
+
+#### Construction of objects
+
+Analogous to the handling of services one needs to register constructors for objects
+in order to construct them via the source. This is done for specific classes, where a
+fallback constructor could be used if there is no constructor for a class:
+
+```php
+<?php
+
+class Foo {
+	function __construct($a) {
+		$this->a = $a;
+	}
+}
+
+class Bar {
+	function __construct($a, $b) {
+		$this->a = $a;
+		$this->b = $b;
+	}
+}
+
+$src = $src
+// A constructor for a special class.
+// If one uses PHP >= 5.5, it is recommanded to use Foo::class.
+->constructorFor("Foo", function(Src $src, $a) {
+	return new Foo($a);
+})
+// Use Reflection class to be able to create any class.
+->defaultConstructor(function(Src $src, $class_name, $params) {
+	$refl = new ReflectionClass($class_name);
+	return $refl->newInstanceArgs($params);
+});
+
+?>
+```
+
+After registering the constructors, one can ask the source to construct an
+object of a class.
+
+```php
+<?php
+
+// Construct a Foo:
+$foo1 = $src->construct("Foo", 1);
+assert($foo1 instanceof Foo);
+assert($foo1->a == 1);
+
+// Construct another Foo:
+$foo2 = $src->construct("Foo", 2);
+assert($foo1 != $foo2);
+assert($foo1 == $foo1);
+
+// Construct a Bar via default constructor:
+$bar = $src->construct("Bar", 1, 2);
+assert($bar instanceof Bar);
+assert($bar->a == 1 && $bar->b == 2);
+
+?>
+```
+
+## Transition Strategy (TBD)
