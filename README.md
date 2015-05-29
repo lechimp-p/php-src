@@ -5,7 +5,7 @@
 # Src
 
 **A library that handles creation of objects and management of global services
-to help you refactor your legacy code base**
+to help you refactor your legacy code base.**
 
 ## Is this a DI-Container, a Lib for Factories or what?
 
