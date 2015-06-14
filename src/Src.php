@@ -189,7 +189,7 @@ class Src {
 
     // For construction:
 
-    public function constructNamed($name, &$args) {
+    protected function constructNamed($name, &$args) {
         if (!array_key_exists($name, $this->constructors)) {
             throw new Exceptions\UnknownClass($name);
         }
@@ -199,7 +199,7 @@ class Src {
         return call_user_func_array($construct, $args);
     }
 
-    public function constructDefault($name, &$args) {
+    protected function constructDefault($name, &$args) {
         unset($args[0]);
         $args = array_values($args);
         $def = $this->default_constructor;
