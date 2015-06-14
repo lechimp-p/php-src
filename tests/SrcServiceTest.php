@@ -120,4 +120,9 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return 10;
         });
     }
+
+    public function testSrcServiceIsSrc() {
+        $src2 = $this->src->service("Src");
+        $this->assertSame($this->src, $src2);
+    }
 }

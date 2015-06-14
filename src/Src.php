@@ -55,6 +55,9 @@ class Src {
         if ($construct) {
             return $this->registerService($name, $construct);
         }
+        else if ($name == "Src") {
+            return $this;
+        }
         else {
             return $this->requestService($name);
         }
