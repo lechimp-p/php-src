@@ -112,6 +112,45 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $this->assertSame($one, $two);
     }
 
+    public function testDifferentServiceAfterUpdate() {
+        $src = $this->src
+        ->service("foo", function ($src) {
+            return "foo";
+        });
+        $foo = $src->service("foo");
+        
+        $src = $src
+        ->service("foo", function ($src) {
+            return "FOO";
+        });
+        $foo2 = $src->service("foo");
+   
+        $this->assertEquals($foo, "foo");
+        $this->assertEquals($foo2, "FOO");
+    }
+
+    public function testTransitiveDifferentServiceAfterUpdate() {
+        $src = $this->src
+        ->service("foo", function($src) {
+            return "foo";
+        })
+        ->service("bar", function($src) {
+            return "bar";
+        })
+        ->service("foobar", function($src) {
+            return $src->service("foo").$src->service("bar");
+        });
+        $foobar = $src->service("foobar");
+        $this->assertEquals($foobar, "foobar");
+        
+        $src = $src
+        ->service("foo", function($src) {
+            return "FOO";
+        });
+        $foobar2 = $src->service("foobar");
+        $this->assertEquals($foobar2, "FOObar");
+    }
+
     /**
      * @expectedException InvalidArgumentException
      */
