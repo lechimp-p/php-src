@@ -12,7 +12,15 @@
 namespace Lechimp\Src;
 
 use Closure;
+use InvalidArgumentException;
 
+/**
+ * Source for services and new objects.
+ *
+ * Never keep a reference to a Src-object that was not requested
+ * from the source object via $src->service("Src").
+ *
+ */
 class Src {
     /**
      * Request or register a constructor for a service.
@@ -34,10 +42,16 @@ class Src {
      * @param   Closure|null    $construct 
      * @throws  Exceptions/UnknownService
      * @throws  Exceptions/UnresolvableDependency
+     * @throws  InvalidArgumentException    When $name == "Src"
      * @return  mixed
      */
     public function service($name, Closure $construct = null) {
         assert(is_string($name));
+
+        if ($name == "Src") {
+            throw new InvalidArgumentException("The name 'Src' is reserved.");
+        }
+
         if ($construct) {
             return $this->registerService($name, $construct);
         }

@@ -111,4 +111,13 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $two = $src2->service("foo");
         $this->assertSame($one, $two);
     }
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testSrcIsInvalidServiceName() {
+        $this->src->service("Src", function($src) {
+            return 10;
+        });
+    }
 }
