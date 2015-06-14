@@ -48,7 +48,7 @@ class Src {
     public function service($name, Closure $construct = null) {
         assert(is_string($name));
 
-        if ($name == "Src") {
+        if ($construct && $name == "Src") {
             throw new InvalidArgumentException("The name 'Src' is reserved.");
         }
 
