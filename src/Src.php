@@ -180,7 +180,10 @@ class Src {
             self::refreshDependentServices($services, $name);
         }
         else {
-            $services[$name] = array( "in_construction" => false );
+            $services[$name] = array( "in_construction" => false
+                                    , "dependencies" => array()
+                                    , "reverse_dependencies" => array()
+                                    );
         }
         $services[$name]["constructor"] = $construct;
         return $this->newSrc( $services
@@ -243,6 +246,8 @@ class Src {
 
         $services[$name] = array( "constructor" => $services[$name]["constructor"]
                                 , "in_construction" => false
+                                , "dependencies" => array()
+                                , "reverse_dependencies" => array()
                                 );
     }
 
