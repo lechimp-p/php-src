@@ -64,6 +64,23 @@ class Src {
     }
 
     /**
+     * Get the dependencies of a service.
+     *
+     * As a sideeffect will construct the service in question if it is not
+     * constructed yet.
+     *
+     * Returns a list of direct dependencies only.
+     *
+     * @param   string      $name
+     * @throws  Exceptions\UnknownService
+     * @return  string[]
+     */
+    public function dependenciesOf($name) {
+        $this->service($name);
+        return $this->services[$name]["dependencies"];
+    }
+
+    /**
      * Register a constructor for a class.
      *
      * On construction with build , gives src and parameters to 
@@ -119,12 +136,18 @@ class Src {
         }
     }
 
+
     /*********************
      * Internals 
      *********************/
     protected $services = array();
     protected $constructors = array();
     protected $default_constructor = null;
+    
+    // For recording of dependencies
+    protected $records = array();
+    protected $paused_records = array();
+    protected $internal_records = array();
 
     // For construction:
 
@@ -165,6 +188,8 @@ class Src {
             throw new Exceptions\UnknownService($name);
         }
 
+        $this->recordDependency($name);
+
         if (array_key_exists("service", $this->services[$name])) {
             return $this->services[$name]["service"];
         }
@@ -181,8 +206,13 @@ class Src {
         $construct = $this->services[$name]["construct"];
         unset($this->services[$name]["construct"]);
 
+        $token = $this->recordDependenciesInternal();
+
         $service = $construct($this);
         $this->services[$name]["service"] = $service;
+
+        $deps = $this->getDependencyRecordInternal($token);
+        $this->services[$name]["dependencies"] = $deps;
 
         return $service;
     }
@@ -204,5 +234,111 @@ class Src {
         $args = array_values($args);
         $def = $this->default_constructor;
         return $def($this, $name, $args);
+    }
+
+    // For recording of dependencies
+    //
+    // Maybe i should make this public?
+
+    /**
+     * Start to record the dependencies that are requested from the Src.
+     *
+     * Returns a token that could later be used with getDependencyRecord
+     * to get an array of the dependencies.
+     *
+     * @return Internal\RecordToken
+     */
+    protected function recordDependencies() {
+        $token = Internal\RecordToken::get();
+
+        $this->records[$token->value()] = array();        
+
+        return $token;    
+    }
+
+    /**
+     * Pause the recording for a token.
+     *
+     * @throws  InvalidArgumentException
+     * @param Internal\RecordToken      $token
+     */
+    protected function pauseDependencyRecord(Internal\RecordToken $token) {
+        if (!array_key_exists($token->value(), $this->records)) {
+            throw new InvalidArgumentException("Unknown, paused or already used token supplied.");
+        }
+
+        $this->paused_records[$token->value()] = $this->records[$token->value()];
+        unset($this->records[$token->value()]);
+    }
+    /**
+     * Resume the recording for a token.
+     *
+     * @throws  InvalidArgumentException
+     * @param Internal\RecordToken      $token
+     */
+    protected function resumeDependencyRecord(Internal\RecordToken $token) {
+        if (!array_key_exists($token->value(), $this->paused_records)) {
+            throw new InvalidArgumentException("Unknown, resumed or already used token supplied.");
+        }
+
+        $this->records[$token->value()] = $this->paused_records[$token->value()];
+        unset($this->paused_records[$token->value()]);
+    }
+
+    /**
+     * Get the result of a dependency record.
+     *
+     * Could only be used once per RecordToken.
+     *
+     * @throws  InvalidArgumentException
+     * @param   Internal\RecordToken    $token
+     * @return  string[]
+     */
+    protected function getDependencyRecord(Internal\RecordToken $token) {
+        if (!array_key_exists($token->value(), $this->records)) {
+            throw new InvalidArgumentException("Unknown or already used token supplied.");
+        }
+
+        $res = $this->records[$token->value()];
+        unset($this->records[$token->value()]);
+
+        return $res;
+    }
+
+    // Add a service to all current dependency records.
+    protected function recordDependency($name) {
+        foreach ($this->records as &$deps) {
+            $deps[] = $name;
+        }
+    }
+
+    // Start an internal record of dependencies.
+    protected function recordDependenciesInternal() {
+        $token = $this->recordDependencies();
+
+        // If there already is a recording going on for internally
+        // tracking the dependencies of each service, we pause it as
+        // we only want the direct dependencies of each service.
+        $last = end($this->internal_records);
+        if ($last) {
+            $this->pauseDependencyRecord($last);
+        }
+
+        $this->internal_records[$token->value()] = $token;
+        return $token;
+    }
+
+    // Get the results for an internal record of dependencies.
+    protected function getDependencyRecordInternal(Internal\RecordToken $token) {
+        assert(array_key_exists($token->value(), $this->internal_records));
+        assert($token->value() == end($this->internal_records)->value());
+        assert(array_key_exists($token->value(), $this->records));
+        
+        array_pop($this->internal_records);
+        if (end($this->internal_records)) {
+            $this->resumeDependencyRecord(end($this->internal_records));
+        }
+
+        return $this->getDependencyRecord($token); 
     }
 }

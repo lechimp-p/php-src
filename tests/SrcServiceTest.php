@@ -151,6 +151,37 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($foobar2, "FOObar");
     }
 
+    public function testGetDependenciesOf() {
+        $src = $this->src
+        ->service("foo", function($src) {
+            return "foo";
+        })
+        ->service("bar", function($src) {
+            return "bar";
+        })
+        ->service("foobar", function($src) {
+            return $src->service("foo").$src->service("bar");
+        });
+        $deps = $src->dependenciesOf("foobar");
+        $this->assertContains("foo", $deps);
+        $this->assertContains("bar", $deps);
+        $this->assertCount(2, $deps);
+    }
+
+    public function testGetDependenciesOfOnlyDirect() {
+        $src = $this->src
+        ->service("foo", function($src) {
+        })
+        ->service("bar", function($src) {
+            $src->service("foo");
+        })
+        ->service("baz", function($src) {
+            $src->service("bar");
+        });
+        $deps = $src->dependenciesOf("baz");
+        $this->assertEquals($deps, array("bar"));
+    }
+
     /**
      * @expectedException InvalidArgumentException
      */
