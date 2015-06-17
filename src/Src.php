@@ -211,8 +211,18 @@ class Src {
         $service = $construct($this);
         $this->services[$name]["service"] = $service;
 
+        // Dependencies of this service
         $deps = $this->getDependencyRecordInternal($token);
         $this->services[$name]["dependencies"] = $deps;
+
+        // Add this services as reverse dependency to all it's
+        // dependencies
+        foreach ($deps as $dep) {
+            $this->services[$dep]["reverse_dependencies"][] = $name;
+        }
+
+        // Track every service, that depends on this service
+        $this->services[$name]["reverse_dependencies"] = $deps;
 
         return $service;
     }
