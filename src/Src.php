@@ -176,10 +176,13 @@ class Src {
 
     protected function registerService($name, Callable $construct) {
         $services = array_merge(array(), $this->services); // shallow copy    
-        $entry = array( "constructor" => $construct 
-                      , "in_construction" => false
-                      );
-        $services[$name] = $entry;
+        if (array_key_exists($name, $services)) {
+            self::refreshDependentServices($services, $name);
+        }
+        else {
+            $services[$name] = array( "in_construction" => false );
+        }
+        $services[$name]["constructor"] = $construct;
         return $this->newSrc( $services
                             , $this->constructors
                             , $this->default_constructor);
@@ -224,11 +227,23 @@ class Src {
         }
 
         // Track every service, that depends on this service
-        $this->services[$name]["reverse_dependencies"] = $deps;
+        $this->services[$name]["reverse_dependencies"] = array();
 
         $this->services[$name]["in_construction"] = false;
 
         return $service;
+    }
+
+    static protected function refreshDependentServices(&$services, $name) {
+        assert(array_key_exists($name, $services));
+ 
+        foreach ($services[$name]["reverse_dependencies"] as $dep) {
+            self::refreshDependentServices($services, $dep);
+        }
+
+        $services[$name] = array( "constructor" => $services[$name]["constructor"]
+                                , "in_construction" => false
+                                );
     }
 
     // For construction:
