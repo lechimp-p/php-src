@@ -176,7 +176,9 @@ class Src {
 
     protected function registerService($name, Callable $construct) {
         $services = array_merge(array(), $this->services); // shallow copy    
-        $entry = array( "construct" => $construct );
+        $entry = array( "constructor" => $construct 
+                      , "in_construction" => false
+                      );
         $services[$name] = $entry;
         return $this->newSrc( $services
                             , $this->constructors
@@ -198,17 +200,17 @@ class Src {
     }
 
     protected function initializeService($name) {
-        if (!array_key_exists("construct", $this->services[$name])) {
+        if ($this->services[$name]["in_construction"]) {
             throw new Exceptions\UnresolvableDependency($name);
         } 
 
         // This is for detection of unresolvable dependencies.
-        $construct = $this->services[$name]["construct"];
-        unset($this->services[$name]["construct"]);
+        $this->services[$name]["in_construction"] = true;
 
         $token = $this->recordDependenciesInternal();
 
-        $service = $construct($this);
+        $constructor = $this->services[$name]["constructor"];
+        $service = $constructor($this);
         $this->services[$name]["service"] = $service;
 
         // Dependencies of this service
@@ -223,6 +225,8 @@ class Src {
 
         // Track every service, that depends on this service
         $this->services[$name]["reverse_dependencies"] = $deps;
+
+        $this->services[$name]["in_construction"] = false;
 
         return $service;
     }
