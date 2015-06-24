@@ -1,7 +1,7 @@
 {
     "name": "lechimp-p/php-src",
     "version": "0.7.0",
-    "description": "A library that handles creation of objects and management of global services to help you refactor your legacy code base"
+    "description": "A library that handles creation of objects and management of global services to help you refactor your legacy code base",
     "keywords": ["form", "formlet"],
     "type": "library",
     "license": "MIT",
