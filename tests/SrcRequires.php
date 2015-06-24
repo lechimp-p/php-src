@@ -116,6 +116,8 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         });
 
         $two = $src2->lazy("foo");
+        print_r($one());
+        print_r($two());
         $this->assertSame($one(), $two());
     }
 
@@ -188,12 +190,5 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         });
         $deps = $src->dependenciesOf("baz");
         $this->assertEquals($deps, array("bar"));
-    }
-
-    /**
-     * @expectedException InvalidArgumentException
-     */
-    public function testSrcIsInvalidServiceNameForRequire() {
-        $this->src->lazy("Src");
     }
 }
