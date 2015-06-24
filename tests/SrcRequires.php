@@ -116,8 +116,6 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         });
 
         $two = $src2->lazy("foo");
-        print_r($one());
-        print_r($two());
         $this->assertSame($one(), $two());
     }
 
