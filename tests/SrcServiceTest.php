@@ -41,9 +41,11 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $src = $this->src
         ->service("foo", function($src) use (&$tmp) {
             $this->assertSame($tmp["src"], $src);
+            $tmp["executed"] = true;
         });
         $tmp["src"] = $src;
         $src->service("foo");
+        $this->assertTrue($tmp["executed"]);
     }
 
     public function testRequestServiceTwice() {
