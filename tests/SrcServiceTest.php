@@ -160,7 +160,8 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return "bar";
         })
         ->service("foobar", function($src) {
-            return $src->service("foo").$src->service("bar");
+            $src->service("foo");
+            $src->service("bar");
         });
         $deps = $src->dependenciesOf("foobar");
         $this->assertContains("foo", $deps);
