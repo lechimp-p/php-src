@@ -76,7 +76,9 @@ class Src {
      * @return  Closure 
      */
     public function lazy($name) {
-        return function() {};
+        return function() use ($name) {
+            return $this->service($name);
+        };
     }
 
     /**
