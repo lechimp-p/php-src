@@ -42,7 +42,7 @@ class Src {
      * @param   Closure|null    $construct 
      * @throws  Exceptions/UnknownService
      * @throws  Exceptions/UnresolvableDependency
-     * @throws  InvalidArgumentException    When $name == "Src"
+     * @throws  InvalidArgumentException    When $name == "Src" and $construct != null
      * @return  mixed
      */
     public function service($name, Closure $construct = null) {
@@ -61,6 +61,22 @@ class Src {
         else {
             return $this->requestService($name);
         }
+    }
+
+    /**
+     * Get a getter for a service.
+     *
+     * This won't initialize the service directly but rather return an
+     * anonymus function that will return the service at a later time.
+     * This could be used for service dependencies that will not be needed
+     * in every case.
+     * 
+     * @param   string          $name
+     * @throws  InvalidArgumentException    When $name == "Src"
+     * @return  Closure 
+     */
+    public function lazy($name) {
+        return function() {};
     }
 
     /**
