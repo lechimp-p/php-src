@@ -88,23 +88,6 @@ class Src {
     }
 
     /**
-     * Register a constructor for a class.
-     *
-     * On construction with build , gives src and parameters to 
-     * 
-     * @param   string          $name
-     * @param   Closure         $construct
-     * @return  Src
-     */
-/*    public function constructorFor($name, Closure $construct) {
-        $constructors = array_merge(array(), $this->constructors); 
-        $constructors[$name] = $construct;
-        return $this->newSrc( $this->services
-                            , $constructors
-                            , $this->default_constructor);
-    }*/
-
-    /**
      * Register a default constructor for classes.
      *
      * This constructor is used, when no constructor for a class could be 
@@ -117,50 +100,22 @@ class Src {
      */
     public function defaultFactory(Closure $construct) {
         return $this->newSrc( $this->services
-                            , $this->constructors
                             , $construct);
     }
-
-    /**
-     * Create a new object.
-     *
-     * @param   string          $name
-     * @param   mixed           ...     Parameters for class construction.
-     * @throws  Exceptions/UnknownClass
-     * @return  mixed
-     */
-/*    public function construct($name) {
-        $args = func_get_args();
-        try {
-            return $this->constructNamed($name, $args);
-        }
-        catch (Exceptions\UnknownClass $e) {
-            if (!$this->default_constructor) {
-                throw $e;
-            }
-
-            return $this->constructDefault($name, $args);
-        }
-    }*/
 
     /*********************
      * Internals 
      *********************/
     protected $services = array();
-    protected $constructors = array();
     protected $default_constructor = null;
     
 
     // For construction:
 
     public function __construct( array &$services = null
-                               , array &$constructors = null
                                , Closure $default_constructor = null) {
         if ($services) {
             $this->services = $services;
-        }
-        if ($constructors) {
-            $this->constructors = $constructors;
         }
         if ($default_constructor) {
             $this->default_constructor = $default_constructor;
@@ -168,10 +123,9 @@ class Src {
     }
 
     protected function newSrc( array &$services
-                             , array &$constructors
                              , $default_constructor) {
         assert($default_constructor instanceof Closure || $default_constructor === null);
-        return new Src($services, $constructors, $default_constructor);
+        return new Src($services, $default_constructor);
     }
 
     // For services: 
@@ -181,7 +135,6 @@ class Src {
         $entry = array( "construct" => $construct );
         $services[$name] = $entry;
         return $this->newSrc( $services
-                            , $this->constructors
                             , $this->default_constructor);
     }
 
@@ -227,16 +180,6 @@ class Src {
             }
             throw new Exceptions\UnknownClass($name);
         }
-    }
-
-    protected function constructNamed($name, &$args) {
-        if (!array_key_exists($name, $this->constructors)) {
-            throw new Exceptions\UnknownClass($name);
-        }
-
-        $args[0] = $this;
-        $construct = $this->constructors[$name];
-        return call_user_func_array($construct, $args);
     }
 
     protected function constructDefault($name, &$args) {
