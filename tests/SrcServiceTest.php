@@ -184,18 +184,4 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $deps = $src->dependenciesOf("baz");
         $this->assertEquals($deps, array("bar"));
     }
-
-    /**
-     * @expectedException InvalidArgumentException
-     */
-    public function testSrcIsInvalidServiceName() {
-        $this->src->service("Src", function($src) {
-            return 10;
-        });
-    }
-
-    public function testSrcServiceIsSrc() {
-        $src2 = $this->src->service("Src");
-        $this->assertSame($this->src, $src2);
-    }
 }

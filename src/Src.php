@@ -39,24 +39,16 @@ class Src {
      * in an odd way.
      *
      * @param   string          $name
-     * @param   Closure|null    $construct 
+     * @param   Closure|null    $factory 
      * @throws  Exceptions/UnknownService
      * @throws  Exceptions/UnresolvableDependency
-     * @throws  InvalidArgumentException    When $name == "Src" and $construct != null
      * @return  mixed
      */
-    public function service($name, Closure $construct = null) {
+    public function service($name, Closure $factory = null) {
         assert(is_string($name));
 
-        if ($construct && $name == "Src") {
-            throw new InvalidArgumentException("The name 'Src' is reserved.");
-        }
-
-        if ($construct) {
-            return $this->registerService($name, $construct);
-        }
-        else if ($name == "Src") {
-            return $this;
+        if ($factory) {
+            return $this->registerService($name, $factory);
         }
         else {
             return $this->requestService($name);
@@ -99,20 +91,35 @@ class Src {
     }
 
     /**
-     * Register a constructor for a class.
+     * Request or register a factory.
      *
-     * On construction with build , gives src and parameters to 
+     * A factory is a function that creates new instances of a class.
+     *
+     * If the second argument is omitted, request a factory for a class. Returns
+     * the factory in that case.
+     *
+     * If the second argument is provided, register a factory for a class. Returns
+     * an updated version of the source in that case.
+     *
+     * If there was no factory registered for a class, throws an UnknownClass 
+     * exception unless a default factory was registered.
      * 
      * @param   string          $name
-     * @param   Closure         $construct
-     * @return  Src
+     * @param   Closure|null    $factory 
+     * @throws  Exceptions/UnknownClass
+     * @return  mixed
+     *
      */
-    public function constructorFor($name, Closure $construct) {
-        $constructors = array_merge(array(), $this->constructors); 
-        $constructors[$name] = $construct;
-        return $this->newSrc( $this->services
-                            , $constructors
-                            , $this->default_constructor);
+    public function factory($name, Closure $factory = null) {
+        assert(is_string($name));
+
+        if ($factory) {
+            return $this->registerFactory($name, $factory);
+        }
+        else {
+            return $this->requestFactory($name);
+        }
+
     }
 
     /**
@@ -123,35 +130,12 @@ class Src {
      * name as arguments, followed by an array of parameters for the class 
      * constructor.
      *
-     * @param   Closure         $construct
+     * @param   Closure         $factory
      * @return  Src
      */
-    public function defaultConstructor(Closure $construct) {
+    public function defaultFactory(Closure $factory) {
         return $this->newSrc( $this->services
-                            , $this->constructors
-                            , $construct);
-    }
-
-    /**
-     * Create a new object.
-     *
-     * @param   string          $name
-     * @param   mixed           ...     Parameters for class construction.
-     * @throws  Exceptions/UnknownClass
-     * @return  mixed
-     */
-    public function construct($name) {
-        $args = func_get_args();
-        try {
-            return $this->constructNamed($name, $args);
-        }
-        catch (Exceptions\UnknownClass $e) {
-            if (!$this->default_constructor) {
-                throw $e;
-            }
-
-            return $this->constructDefault($name, $args);
-        }
+                            , $factory);
     }
 
 
@@ -159,41 +143,32 @@ class Src {
      * Internals 
      *********************/
     protected $services = array();
-    protected $constructors = array();
-    protected $default_constructor = null;
-    
-    // For recording of dependencies
-    protected $records = array();
-    protected $paused_records = array();
-    protected $internal_records = array();
+    protected $default_factory = null;
 
     // For construction:
 
     public function __construct( array &$services = null
-                               , array &$constructors = null
-                               , Closure $default_constructor = null) {
+                               , Closure $default_factory = null) {
         if ($services) {
             $this->services = $services;
         }
-        if ($constructors) {
-            $this->constructors = $constructors;
-        }
-        if ($default_constructor) {
-            $this->default_constructor = $default_constructor;
+        if ($default_factory) {
+            $this->default_factory = $default_factory;
         }
     }
 
     protected function newSrc( array &$services
-                             , array &$constructors
-                             , $default_constructor) {
-        assert($default_constructor instanceof Closure || $default_constructor === null);
-        return new Src($services, $constructors, $default_constructor);
+                             , $default_factory) {
+        assert($default_factory instanceof Closure || $default_factory === null);
+        return new Src($services, $default_factory);
     }
 
     // For services: 
 
-    protected function registerService($name, Callable $construct) {
+    protected function registerService($name, Callable $factory) {
+        $name = "service::$name";
         $services = array_merge(array(), $this->services); // shallow copy    
+
         if (array_key_exists($name, $services)) {
             self::refreshDependentServices($services, $name);
         }
@@ -203,13 +178,13 @@ class Src {
                                     , "reverse_dependencies" => array()
                                     );
         }
-        $services[$name]["constructor"] = $construct;
+        $services[$name]["constructor"] = $factory;
         return $this->newSrc( $services
-                            , $this->constructors
-                            , $this->default_constructor);
+                            , $this->default_factory);
     }
 
     protected function requestService($name) {
+        $name = "service::$name";
         if (!array_key_exists($name, $this->services)) {
             throw new Exceptions\UnknownService($name);
         }
@@ -233,8 +208,8 @@ class Src {
 
         $token = $this->recordDependenciesInternal();
 
-        $constructor = $this->services[$name]["constructor"];
-        $service = $constructor($this);
+        $factoryor = $this->services[$name]["constructor"];
+        $service = $factoryor($this);
         $this->services[$name]["service"] = $service;
 
         // Dependencies of this service
@@ -269,23 +244,36 @@ class Src {
                                 );
     }
 
-    // For construction:
+    // For factories:
 
-    protected function constructNamed($name, &$args) {
-        if (!array_key_exists($name, $this->constructors)) {
+    protected function requestFactory($name) {
+        try {
+            return $this->service("factory::$name");
+        }
+        catch (Exceptions\UnknownService $e) {
+            if ($this->default_factory !== null) {
+                return $this->getDefaultFactory($name);
+            }
             throw new Exceptions\UnknownClass($name);
         }
-
-        $args[0] = $this;
-        $construct = $this->constructors[$name];
-        return call_user_func_array($construct, $args);
     }
 
-    protected function constructDefault($name, &$args) {
-        unset($args[0]);
-        $args = array_values($args);
-        $def = $this->default_constructor;
-        return $def($this, $name, $args);
+    protected function registerFactory($name, $factory) {
+        $name = "factory::$name";
+        return $this->service($name, function($src) use ($factory){
+            return function() use ($src, $factory) {
+                $args = array_merge(array($src), func_get_args());
+                return call_user_func_array($factory, $args);
+            };
+        });
+    }
+
+    protected function getDefaultFactory($name) {
+        return function() use ($name) {
+            $args = func_get_args();
+            $def = $this->default_factory;
+            return $def($this, $name, $args);
+        };
     }
 
     // For recording of dependencies
