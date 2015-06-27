@@ -68,6 +68,7 @@ class Src {
      * @return  Closure 
      */
     public function lazy($name) {
+        $this->recordDependency("service::$name");
         return function() use ($name) {
             return $this->service($name);
         };
