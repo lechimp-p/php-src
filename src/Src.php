@@ -39,21 +39,21 @@ class Src {
      * in an odd way.
      *
      * @param   string          $name
-     * @param   Closure|null    $construct 
+     * @param   Closure|null    $factory 
      * @throws  Exceptions/UnknownService
      * @throws  Exceptions/UnresolvableDependency
      * @throws  InvalidArgumentException    When $name == "Src"
      * @return  mixed
      */
-    public function service($name, Closure $construct = null) {
+    public function service($name, Closure $factory = null) {
         assert(is_string($name));
 
-        if ($construct && $name == "Src") {
+        if ($factory && $name == "Src") {
             throw new InvalidArgumentException("The name 'Src' is reserved.");
         }
 
-        if ($construct) {
-            return $this->registerService($name, $construct);
+        if ($factory) {
+            return $this->registerService($name, $factory);
         }
         else if ($name == "Src") {
             return $this;
@@ -67,19 +67,19 @@ class Src {
      * Request or register a factory.
      *
      * @param   string          $name
-     * @param   Closure|null    $construct 
+     * @param   Closure|null    $factory 
      * ?? @throws  Exceptions/UnknownService
      * ?? @throws  Exceptions/UnresolvableDependency
      * ?? @throws  InvalidArgumentException    When $name == "Src"
      * @return  mixed
      *
      */
-    public function factory($name, Closure $construct = null) {
-        if ($construct === null) {
+    public function factory($name, Closure $factory = null) {
+        if ($factory === null) {
             return $this->requestFactory($name);
         }
 
-        return $this->registerFactory($name, $construct);
+        return $this->registerFactory($name, $factory);
     }
 
     /**
@@ -90,12 +90,12 @@ class Src {
      * name as arguments, followed by an array of parameters for the class 
      * constructor.
      *
-     * @param   Closure         $construct
+     * @param   Closure         $factory
      * @return  Src
      */
-    public function defaultFactory(Closure $construct) {
+    public function defaultFactory(Closure $factory) {
         return $this->newSrc( $this->services
-                            , $construct);
+                            , $factory);
     }
 
     /*********************
@@ -125,9 +125,9 @@ class Src {
 
     // For services: 
 
-    protected function registerService($name, Callable $construct) {
+    protected function registerService($name, Callable $factory) {
         $services = array_merge(array(), $this->services); // shallow copy    
-        $entry = array( "construct" => $construct );
+        $entry = array( "construct" => $factory );
         $services[$name] = $entry;
         return $this->newSrc( $services
                             , $this->default_factory);
@@ -151,10 +151,10 @@ class Src {
         } 
 
         // This is for detection of unresolvable dependencies.
-        $construct = $this->services[$name]["construct"];
+        $factory = $this->services[$name]["construct"];
         unset($this->services[$name]["construct"]);
 
-        $service = $construct($this);
+        $service = $factory($this);
         $this->services[$name]["service"] = $service;
 
         return $service;
@@ -174,11 +174,11 @@ class Src {
         }
     }
 
-    protected function registerFactory($name, $construct) {
-        return $this->service($name, function($src) use ($construct){
-            return function() use ($src, $construct) {
+    protected function registerFactory($name, $factory) {
+        return $this->service($name, function($src) use ($factory){
+            return function() use ($src, $factory) {
                 $args = array_merge(array($src), func_get_args());
-                return call_user_func_array($construct, $args);
+                return call_user_func_array($factory, $args);
             };
         });
     }
