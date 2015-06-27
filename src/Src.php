@@ -42,23 +42,13 @@ class Src {
      * @param   Closure|null    $factory 
      * @throws  Exceptions/UnknownService
      * @throws  Exceptions/UnresolvableDependency
-     * @throws  InvalidArgumentException    When $name == "Src"
      * @return  mixed
      */
     public function service($name, Closure $factory = null) {
         assert(is_string($name));
 
-        if ($factory && $name == "Src") {
-            throw new InvalidArgumentException("The name 'Src' is reserved.");
-        }
-
-        $name = "service::$name";
-
         if ($factory) {
             return $this->registerService($name, $factory);
-        }
-        else if ($name == "service::Src") {
-            return $this;
         }
         else {
             return $this->requestService($name);
@@ -77,11 +67,15 @@ class Src {
      *
      */
     public function factory($name, Closure $factory = null) {
-        if ($factory === null) {
+        assert(is_string($name));
+
+        if ($factory) {
+            return $this->registerFactory($name, $factory);
+        }
+        else {
             return $this->requestFactory($name);
         }
 
-        return $this->registerFactory($name, $factory);
     }
 
     /**
@@ -128,6 +122,7 @@ class Src {
     // For services: 
 
     protected function registerService($name, Callable $factory) {
+        $name = "service::$name";
         $services = array_merge(array(), $this->services); // shallow copy    
         $entry = array( "construct" => $factory );
         $services[$name] = $entry;
@@ -136,6 +131,7 @@ class Src {
     }
 
     protected function requestService($name) {
+        $name = "service::$name";
         if (!array_key_exists($name, $this->services)) {
             throw new Exceptions\UnknownService($name);
         }
