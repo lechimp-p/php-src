@@ -79,12 +79,7 @@ class Src {
             return $this->requestFactory($name);
         }
 
-        return $this->service($name, function($src) use ($construct){
-            return function() use ($src, $construct) {
-                $args = array_merge(array($src), func_get_args());
-                return call_user_func_array($construct, $args);
-            };
-        });
+        return $this->registerFactory($name, $construct);
     }
 
     /**
@@ -177,6 +172,15 @@ class Src {
             }
             throw new Exceptions\UnknownClass($name);
         }
+    }
+
+    protected function registerFactory($name, $construct) {
+        return $this->service($name, function($src) use ($construct){
+            return function() use ($src, $construct) {
+                $args = array_merge(array($src), func_get_args());
+                return call_user_func_array($construct, $args);
+            };
+        });
     }
 
     protected function getDefaultFactory($name) {
