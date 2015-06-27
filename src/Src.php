@@ -181,9 +181,9 @@ class Src {
         }
         else {
             $providers[$name] = array( "in_construction" => false
-                                    , "dependencies" => array()
-                                    , "reverse_dependencies" => array()
-                                    );
+                                     , "dependencies" => array()
+                                     , "reverse_dependencies" => array()
+                                     );
         }
         $providers[$name]["factory"] = $factory;
         return $this->newSrc( $providers
@@ -254,7 +254,6 @@ class Src {
 
     protected function registerService($name, Callable $factory) {
         $name = "service::$name";
-
         return $this->registerProvider($name, $factory);
     }
 
