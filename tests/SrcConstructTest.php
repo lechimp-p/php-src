@@ -22,72 +22,78 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
     public function setUp() {
         $src = new Lechimp\Src\Src();
         $this->src = $src
-        ->constructorFor("Foo", function($src, $a, $b) {
+        ->factory("Foo", function($src, $a, $b) {
             return new Foo($a, $b);
         });
     }
 
     public function testConstruct() {
-        $inst = $this->src->construct("Foo", "a", "b");
+        $factory = $this->src->factory("Foo");
+        $inst = $factory("a", "b");
         $this->assertInstanceOf("Foo", $inst);
     }
 
     public function testParams() {
-        $inst = $this->src->construct("Foo", "a", "b");
+        $factory = $this->src->factory("Foo");
+        $inst = $factory("a", "b");
         $this->assertEquals("a", $inst->a);
         $this->assertEquals("b", $inst->b);
     }
 
     public function testConstructsFreshInstances() {
-        $inst1 = $this->src->construct("Foo", "a", "b");
-        $inst2 = $this->src->construct("Foo", "a", "b");
+        $factory = $this->src->factory("Foo");
+        $inst1 = $factory("a", "b");
+        $inst2 = $factory("a", "b");
         $this->assertNotSame($inst1, $inst2);
     }
 
     public function testPassesSrc() {
         $tmp = array();
         $src = $this->src
-        ->constructorFor("Bar", function($src) use (&$tmp) {
+        ->factory("Bar", function($src) use (&$tmp) {
             $this->assertSame($src, $tmp["src"]);
         });
         $tmp["src"] = $src; 
 
-        $src->construct("Bar");
+        $factory = $src->factory("Bar");
+        $factory();
 
         $this->assertSame($src, $tmp["src"]);
     }
 
-    public function testDefaultConstructor() {
+    public function testDefaultFactory() {
         $tmp = array( "called" => false );
         $src = (new Lechimp\Src\Src())
-        ->defaultConstructor(function($src, $class_name, $params) use (&$tmp) {
+        ->defaultFactory(function($src, $class_name, $params) use (&$tmp) {
             $tmp["called"] = true;
             $this->assertEquals("Foo", $class_name);
-            $this->assertEquals("a", $params[0]);
-            $this->assertEquals("b", $params[1]);
+            $this->assertEquals(array("a", "b"), $params);
         });
-        $src->construct("Foo", "a", "b");
+        $factory = $src->factory("Foo");
+        $factory("a", "b");
         $this->assertTrue($tmp["called"]);
     }
 
-    public function testNamedBeforeDefaultConstructor() {
+    public function testNamedBeforeDefaultFactory() {
         $tmp = array( "called" => false);
         $src = $this->src
-        ->defaultConstructor(function($src, $class_name, $params) use ($tmp) {
+        ->defaultFactory(function($src, $class_name, $params) use ($tmp) {
             $tmp["called"] = false;
         }); 
-        $src->construct("Foo", "a", "b");
+        $factory = $src->factory("Foo");
+        $factory("a", "b");
         $this->assertFalse($tmp["called"]);
     }
 
-    public function testPassesSrcToDefaultConstructor() {
+    public function testPassesSrcToDefaultFactory() {
         $tmp = array();
         $src = $this->src
-        ->defaultConstructor(function($src, $class_name, $params) use (&$tmp) {
+        ->defaultFactory(function($src, $class_name, $params) use (&$tmp) {
             $this->assertSame($src, $tmp["src"]);
         });
         $tmp["src"] = $src; 
-        $src->construct("Bar");
+        $factory = $src->factory("Bar");
+        $factory();
 
         $this->assertSame($src, $tmp["src"]);
     }
@@ -96,18 +102,19 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
      * @expectedException Lechimp\Src\Exceptions\UnknownClass
      */
     public function testUnknownClass() {
-        $this->src->construct("Bar");
+        $this->src->factory("Bar");
     }
 
     public function testIsImmutable() {
         $src = $this->src
-        ->constructorFor("Bar", function($src) {
+        ->factory("Bar", function($src) {
             return "foo";
         });
 
         $this->assertNotSame($src, $this->src);
         try {
-            $this->src->construct("Bar");
+            $factory = $this->src->factory("Bar");
+            $factory();
             $raised = false;
         }
         catch (Lechimp\Src\Exceptions\UnknownClass $e) {
@@ -116,15 +123,16 @@ class SrcBuildTest extends PHPUnit_Framework_TestCase {
         $this->assertTrue($raised);
     }
 
-    public function testIsImmutableAfterDefaultConstructorUpdate() {
+    public function testIsImmutableAfterDefaultFactoryUpdate() {
         $src = $this->src
-        ->defaultConstructor(function($src, $class_name, $args) {
+        ->defaultFactory(function($src, $class_name, $args) {
             return "foo";
         });
 
         $this->assertNotSame($src, $this->src);
         try {
-            $this->src->construct("Bar");
+            $factory = $this->src->factory("Bar");
+            $factory();
             $raised = false;
         }
         catch (Lechimp\Src\Exceptions\UnknownClass $e) {

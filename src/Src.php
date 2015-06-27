@@ -64,6 +64,30 @@ class Src {
     }
 
     /**
+     * Request or register a factory.
+     *
+     * @param   string          $name
+     * @param   Closure|null    $construct 
+     * ?? @throws  Exceptions/UnknownService
+     * ?? @throws  Exceptions/UnresolvableDependency
+     * ?? @throws  InvalidArgumentException    When $name == "Src"
+     * @return  mixed
+     *
+     */
+    public function factory($name, Closure $construct = null) {
+        if ($construct === null) {
+            return $this->requestFactory($name);
+        }
+
+        return $this->service($name, function($src) use ($construct){
+            return function() use ($src, $construct) {
+                $args = array_merge(array($src), func_get_args());
+                return call_user_func_array($construct, $args);
+            };
+        });
+    }
+
+    /**
      * Register a constructor for a class.
      *
      * On construction with build , gives src and parameters to 
@@ -72,13 +96,13 @@ class Src {
      * @param   Closure         $construct
      * @return  Src
      */
-    public function constructorFor($name, Closure $construct) {
+/*    public function constructorFor($name, Closure $construct) {
         $constructors = array_merge(array(), $this->constructors); 
         $constructors[$name] = $construct;
         return $this->newSrc( $this->services
                             , $constructors
                             , $this->default_constructor);
-    }
+    }*/
 
     /**
      * Register a default constructor for classes.
@@ -91,7 +115,7 @@ class Src {
      * @param   Closure         $construct
      * @return  Src
      */
-    public function defaultConstructor(Closure $construct) {
+    public function defaultFactory(Closure $construct) {
         return $this->newSrc( $this->services
                             , $this->constructors
                             , $construct);
@@ -105,7 +129,7 @@ class Src {
      * @throws  Exceptions/UnknownClass
      * @return  mixed
      */
-    public function construct($name) {
+/*    public function construct($name) {
         $args = func_get_args();
         try {
             return $this->constructNamed($name, $args);
@@ -117,7 +141,7 @@ class Src {
 
             return $this->constructDefault($name, $args);
         }
-    }
+    }*/
 
     /*********************
      * Internals 
@@ -125,6 +149,7 @@ class Src {
     protected $services = array();
     protected $constructors = array();
     protected $default_constructor = null;
+    
 
     // For construction:
 
@@ -187,7 +212,22 @@ class Src {
         return $service;
     }
 
-    // For construction:
+    // For factories:
+
+    protected function requestFactory($name) {
+        try {
+            return $this->service($name);
+        }
+        catch (Exceptions\UnknownService $e) {
+            if ($this->default_constructor !== null) {
+                return function() use ($name) {
+                    $args = func_get_args();
+                    return $this->constructDefault($name, $args);
+                };
+            }
+            throw new Exceptions\UnknownClass($name);
+        }
+    }
 
     protected function constructNamed($name, &$args) {
         if (!array_key_exists($name, $this->constructors)) {
@@ -200,8 +240,6 @@ class Src {
     }
 
     protected function constructDefault($name, &$args) {
-        unset($args[0]);
-        $args = array_values($args);
         $def = $this->default_constructor;
         return $def($this, $name, $args);
     }
