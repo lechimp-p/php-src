@@ -23,7 +23,7 @@ use InvalidArgumentException;
  */
 class Src {
     /**
-     * Request or register a constructor for a service.
+     * Request or register a factory for a service.
      *
      * A service is an object that only exists once in the process. It is
      * initialized on the first request for the service and is only initialized
@@ -86,8 +86,8 @@ class Src {
      * @return  string[]
      */
     public function dependenciesOf($name) {
-        $this->service($name);
-        return $this->services[$name]["dependencies"];
+        $this->requestProvider($name);
+        return $this->providers["$name"]["dependencies"];
     }
 
     /**
@@ -123,18 +123,18 @@ class Src {
     }
 
     /**
-     * Register a default constructor for classes.
+     * Register a default factory for classes.
      *
-     * This constructor is used, when no constructor for a class could be 
+     * This factory is used, when no factory for a class could be 
      * found. The closure must be a function taking the Src and the class
      * name as arguments, followed by an array of parameters for the class 
-     * constructor.
+     * factory.
      *
      * @param   Closure         $factory
      * @return  Src
      */
     public function defaultFactory(Closure $factory) {
-        return $this->newSrc( $this->services
+        return $this->newSrc( $this->providers
                             , $factory);
     }
 
@@ -142,7 +142,7 @@ class Src {
     /*********************
      * Internals 
      *********************/
-    protected $services = array();
+    protected $providers = array();
     protected $default_factory = null;
     
     // For recording of dependencies
@@ -152,108 +152,123 @@ class Src {
 
     // For construction:
 
-    public function __construct( array &$services = null
+    public function __construct( array &$providers = null
                                , Closure $default_factory = null) {
-        if ($services) {
-            $this->services = $services;
+        if ($providers) {
+            $this->providers = $providers;
         }
         if ($default_factory) {
             $this->default_factory = $default_factory;
         }
     }
 
-    protected function newSrc( array &$services
+    protected function newSrc( array &$providers
                              , $default_factory) {
         assert($default_factory instanceof Closure || $default_factory === null);
-        return new Src($services, $default_factory);
+        return new Src($providers, $default_factory);
     }
 
-    // For services: 
+    // For providers: 
+    //
+    // A provider abstracts over services and factories. This makes it possible
+    // to use the same logic for services and factories.
 
-    protected function registerService($name, Callable $factory) {
-        $name = "service::$name";
-        $services = array_merge(array(), $this->services); // shallow copy    
+    protected function registerProvider($name, Callable $factory) {
+        $providers = array_merge(array(), $this->providers); // shallow copy    
 
-        if (array_key_exists($name, $services)) {
-            self::refreshDependentServices($services, $name);
+        if (array_key_exists($name, $providers)) {
+            self::refreshDependentProviders($providers, $name);
         }
         else {
-            $services[$name] = array( "in_construction" => false
+            $providers[$name] = array( "in_construction" => false
                                     , "dependencies" => array()
                                     , "reverse_dependencies" => array()
                                     );
         }
-        $services[$name]["constructor"] = $factory;
-        return $this->newSrc( $services
+        $providers[$name]["factory"] = $factory;
+        return $this->newSrc( $providers
                             , $this->default_factory);
     }
-
-    protected function requestService($name) {
-        $name = "service::$name";
-        if (!array_key_exists($name, $this->services)) {
+  
+    protected function requestProvider($name) {
+        if (!array_key_exists($name, $this->providers)) {
             throw new Exceptions\UnknownService($name);
         }
 
         $this->recordDependency($name);
 
-        if (array_key_exists("service", $this->services[$name])) {
-            return $this->services[$name]["service"];
+        if (array_key_exists("provider", $this->providers[$name])) {
+            return $this->providers[$name]["provider"];
         }
 
-        return $this->initializeService($name);
+        return $this->initializeProvider($name);
     }
 
-    protected function initializeService($name) {
-        if ($this->services[$name]["in_construction"]) {
+    protected function initializeProvider($name) {
+        if ($this->providers[$name]["in_construction"]) {
             throw new Exceptions\UnresolvableDependency($name);
         } 
 
         // This is for detection of unresolvable dependencies.
-        $this->services[$name]["in_construction"] = true;
+        $this->providers[$name]["in_construction"] = true;
 
         $token = $this->recordDependenciesInternal();
 
-        $factoryor = $this->services[$name]["constructor"];
-        $service = $factoryor($this);
-        $this->services[$name]["service"] = $service;
+        $factory = $this->providers[$name]["factory"];
+        $provider = $factory($this);
+        $this->providers[$name]["provider"] = $provider;
 
-        // Dependencies of this service
+        // Dependencies of this provider
         $deps = $this->getDependencyRecordInternal($token);
-        $this->services[$name]["dependencies"] = $deps;
+        $this->providers[$name]["dependencies"] = $deps;
 
-        // Add this services as reverse dependency to all it's
+        // Add this providers as reverse dependency to all it's
         // dependencies
         foreach ($deps as $dep) {
-            $this->services[$dep]["reverse_dependencies"][] = $name;
+            $this->providers[$dep]["reverse_dependencies"][] = $name;
         }
 
-        // Track every service, that depends on this service
-        $this->services[$name]["reverse_dependencies"] = array();
+        // Track every provider, that depends on this provider
+        $this->providers[$name]["reverse_dependencies"] = array();
 
-        $this->services[$name]["in_construction"] = false;
+        $this->providers[$name]["in_construction"] = false;
 
-        return $service;
+        return $provider;
     }
 
-    static protected function refreshDependentServices(&$services, $name) {
-        assert(array_key_exists($name, $services));
+    static protected function refreshDependentProviders(&$providers, $name) {
+        assert(array_key_exists($name, $providers));
  
-        foreach ($services[$name]["reverse_dependencies"] as $dep) {
-            self::refreshDependentServices($services, $dep);
+        foreach ($providers[$name]["reverse_dependencies"] as $dep) {
+            self::refreshDependentProviders($providers, $dep);
         }
 
-        $services[$name] = array( "constructor" => $services[$name]["constructor"]
+        $providers[$name] = array( "factory" => $providers[$name]["factory"]
                                 , "in_construction" => false
                                 , "dependencies" => array()
                                 , "reverse_dependencies" => array()
                                 );
     }
 
+    // For services:   
+
+    protected function registerService($name, Callable $factory) {
+        $name = "service::$name";
+
+        return $this->registerProvider($name, $factory);
+    }
+
+
+    protected function requestService($name) {
+        $name = "service::$name";
+        return $this->requestProvider($name);
+    }
+
     // For factories:
 
     protected function requestFactory($name) {
         try {
-            return $this->service("factory::$name");
+            return $this->requestProvider("factory::$name");
         }
         catch (Exceptions\UnknownService $e) {
             if ($this->default_factory !== null) {
@@ -265,7 +280,7 @@ class Src {
 
     protected function registerFactory($name, $factory) {
         $name = "factory::$name";
-        return $this->service($name, function($src) use ($factory){
+        return $this->registerProvider($name, function($src) use ($factory){
             return function() use ($src, $factory) {
                 $args = array_merge(array($src), func_get_args());
                 return call_user_func_array($factory, $args);
@@ -350,7 +365,7 @@ class Src {
         return $res;
     }
 
-    // Add a service to all current dependency records.
+    // Add a provider to all current dependency records.
     protected function recordDependency($name) {
         foreach ($this->records as &$deps) {
             $deps[] = $name;
@@ -362,8 +377,8 @@ class Src {
         $token = $this->recordDependencies();
 
         // If there already is a recording going on for internally
-        // tracking the dependencies of each service, we pause it as
-        // we only want the direct dependencies of each service.
+        // tracking the dependencies of each provider, we pause it as
+        // we only want the direct dependencies of each provider.
         $last = end($this->internal_records);
         if ($last) {
             $this->pauseDependencyRecord($last);
