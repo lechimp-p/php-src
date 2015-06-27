@@ -144,6 +144,11 @@ class Src {
      *********************/
     protected $services = array();
     protected $default_factory = null;
+    
+    // For recording of dependencies
+    protected $records = array();
+    protected $paused_records = array();
+    protected $internal_records = array();
 
     // For construction:
 
