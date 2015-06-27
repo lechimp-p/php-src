@@ -9,7 +9,7 @@
  * a copy of the along with the code.
  */
 
-class SrcServiceTest extends PHPUnit_Framework_TestCase {
+class SrcLazyTest extends PHPUnit_Framework_TestCase {
     public function setUp() {
         $this->src = new Lechimp\Src\Src();
     }
