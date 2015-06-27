@@ -107,25 +107,25 @@ class Src {
      * Internals 
      *********************/
     protected $services = array();
-    protected $default_constructor = null;
+    protected $default_factory = null;
     
 
     // For construction:
 
     public function __construct( array &$services = null
-                               , Closure $default_constructor = null) {
+                               , Closure $default_factory = null) {
         if ($services) {
             $this->services = $services;
         }
-        if ($default_constructor) {
-            $this->default_constructor = $default_constructor;
+        if ($default_factory) {
+            $this->default_factory = $default_factory;
         }
     }
 
     protected function newSrc( array &$services
-                             , $default_constructor) {
-        assert($default_constructor instanceof Closure || $default_constructor === null);
-        return new Src($services, $default_constructor);
+                             , $default_factory) {
+        assert($default_factory instanceof Closure || $default_factory === null);
+        return new Src($services, $default_factory);
     }
 
     // For services: 
@@ -135,7 +135,7 @@ class Src {
         $entry = array( "construct" => $construct );
         $services[$name] = $entry;
         return $this->newSrc( $services
-                            , $this->default_constructor);
+                            , $this->default_factory);
     }
 
     protected function requestService($name) {
@@ -172,18 +172,18 @@ class Src {
             return $this->service($name);
         }
         catch (Exceptions\UnknownService $e) {
-            if ($this->default_constructor !== null) {
-                return function() use ($name) {
-                    $args = func_get_args();
-                    return $this->constructDefault($name, $args);
-                };
+            if ($this->default_factory !== null) {
+                return $this->getDefaultFactory($name);
             }
             throw new Exceptions\UnknownClass($name);
         }
     }
 
-    protected function constructDefault($name, &$args) {
-        $def = $this->default_constructor;
-        return $def($this, $name, $args);
+    protected function getDefaultFactory($name) {
+        return function() use ($name) {
+            $args = func_get_args();
+            $def = $this->default_factory;
+            return $def($this, $name, $args);
+        };
     }
 }
