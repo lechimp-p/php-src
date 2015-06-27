@@ -58,11 +58,20 @@ class Src {
     /**
      * Request or register a factory.
      *
+     * A factory is a function that creates new instances of a class.
+     *
+     * If the second argument is omitted, request a factory for a class. Returns
+     * the factory in that case.
+     *
+     * If the second argument is provided, register a factory for a class. Returns
+     * an updated version of the source in that case.
+     *
+     * If there was no factory registered for a class, throws an UnknownClass 
+     * exception unless a default factory was registered.
+     * 
      * @param   string          $name
      * @param   Closure|null    $factory 
-     * ?? @throws  Exceptions/UnknownService
-     * ?? @throws  Exceptions/UnresolvableDependency
-     * ?? @throws  InvalidArgumentException    When $name == "Src"
+     * @throws  Exceptions/UnknownClass
      * @return  mixed
      *
      */
