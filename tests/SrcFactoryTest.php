@@ -18,7 +18,7 @@ class Foo {
     }
 }
 
-class SrcBuildTest extends PHPUnit_Framework_TestCase {
+class SrcFactoryTest extends PHPUnit_Framework_TestCase {
     public function setUp() {
         $src = new Lechimp\Src\Src();
         $this->src = $src
