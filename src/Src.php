@@ -52,10 +52,12 @@ class Src {
             throw new InvalidArgumentException("The name 'Src' is reserved.");
         }
 
+        $name = "service::$name";
+
         if ($factory) {
             return $this->registerService($name, $factory);
         }
-        else if ($name == "Src") {
+        else if ($name == "service::Src") {
             return $this;
         }
         else {
@@ -164,7 +166,7 @@ class Src {
 
     protected function requestFactory($name) {
         try {
-            return $this->service($name);
+            return $this->service("factory::$name");
         }
         catch (Exceptions\UnknownService $e) {
             if ($this->default_factory !== null) {
@@ -175,6 +177,7 @@ class Src {
     }
 
     protected function registerFactory($name, $factory) {
+        $name = "factory::$name";
         return $this->service($name, function($src) use ($factory){
             return function() use ($src, $factory) {
                 $args = array_merge(array($src), func_get_args());
