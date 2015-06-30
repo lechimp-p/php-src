@@ -75,26 +75,6 @@ class Src {
     }
 
     /**
-     * Get the dependencies of a service or a factory.
-     *
-     * Prefix service names with "service::" and factories with "factory::".
-     *
-     * As a sideeffect will construct the service or factory in question if 
-     * it is not constructed yet.
-     *
-     * Returns a list of direct dependencies only.
-     *
-     * @param   string      $name
-     * @throws  Exceptions\UnknownService
-     * @throws  Exceptions\UnknownClass
-     * @return  string[]
-     */
-    public function dependenciesOf($name) {
-        $this->requestProvider($name);
-        return $this->providers["$name"]["dependencies"];
-    }
-
-    /**
      * Request or register a factory.
      *
      * A factory is a function that creates new instances of a class.
@@ -142,6 +122,25 @@ class Src {
                             , $factory);
     }
 
+    /**
+     * Get the dependencies of a service or a factory.
+     *
+     * Prefix service names with "service::" and factories with "factory::".
+     *
+     * As a sideeffect will construct the service or factory in question if 
+     * it is not constructed yet.
+     *
+     * Returns a list of direct dependencies only.
+     *
+     * @param   string      $name
+     * @throws  Exceptions\UnknownService
+     * @throws  Exceptions\UnknownClass
+     * @return  string[]
+     */
+    public function dependenciesOf($name) {
+        $this->requestProvider($name);
+        return $this->providers["$name"]["dependencies"];
+    }
 
     /*********************
      * Internals 
