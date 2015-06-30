@@ -274,10 +274,10 @@ class Src {
         }
 
         $providers[$name] = array( "factory" => $providers[$name]["factory"]
-                                , "in_construction" => false
-                                , "dependencies" => array()
-                                , "reverse_dependencies" => array()
-                                );
+                                 , "in_construction" => false
+                                 , "dependencies" => array()
+                                 , "reverse_dependencies" => array()
+                                 );
     }
 
     /**
