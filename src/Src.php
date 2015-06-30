@@ -149,13 +149,18 @@ class Src {
      */
     public function dependenciesOf($name) {
         $this->requestProvider($name);
-        return $this->providers["$name"]["dependencies"];
+        return $this->dependencies["$name"];
     }
 
     /*********************
      * Internals 
      *********************/
-    protected $providers = array();
+    // All things providers.
+    protected $factories = array();
+    protected $instances = array();
+    protected $in_construction = array();
+    protected $dependencies = array();
+    protected $reverse_deps = array();
     protected $default_factory = null;
 
     // For tracking the tree of sources.
@@ -176,15 +181,29 @@ class Src {
         $new_provider_names = array_keys($new_providers);
         assert(count($new_provider_names) <= 1);
 
-        $this->providers = array_merge( $ancestor ? $ancestor->providers : array()
-                                      , $new_providers);
+        $instances = array();
+        $dependencies = array();
+        $reverse_deps = array();
+        foreach ($new_provider_names as $name) {
+            if ($ancestor && !array_key_exists($name, $ancestor->reverse_deps)) {
+                $reverse_deps[$name] = array();
+            }
+        }
 
-        $this->default_factory = $new_default_factory
-                               ? $new_default_factory
-                               : ($ancestor ? $ancestor->default_factory : null);
+        if ($ancestor) {
+            $this->factories = array_merge($ancestor->factories, $new_providers);
+            $this->instances = array_merge($ancestor->instances, $instances);
+            $this->dependencies = array_merge($ancestor->dependencies, $dependencies);
+            $this->reverse_deps = array_merge($ancestor->reverse_deps, $reverse_deps);
+            $this->default_factory = $ancestor->default_factory;
+        }
+
+        if ($new_default_factory) {
+            $this->default_factory = $new_default_factory;
+        }
 
         if (!empty($new_provider_names)) {
-            self::refreshDependentProviders($this->providers, $new_provider_names[0]);
+            $this->refreshProvider($new_provider_names[0]);
         }
     }
 
@@ -200,84 +219,65 @@ class Src {
     // to use the same logic for services and factories.
 
     protected function registerProvider($name, Callable $factory) {
-        if (array_key_exists($name, $this->providers)) {
-            $reverse_dependencies = $this->providers[$name]["reverse_dependencies"];
-        }
-        else {
-            $reverse_dependencies = array();
-        }
-
-        return $this->newSrc(array
-                    ( $name => array
-                        ( "in_construction" => false
-                        , "dependencies" => array()
-                        , "reverse_dependencies" => $reverse_dependencies
-                        , "factory" => $factory
-                        )
-                    ));
-
-        return $this->newSrc( $providers
-                            , $this->default_factory);
+        return $this->newSrc(array($name => $factory));
     }
   
     protected function requestProvider($name) {
-        if (!array_key_exists($name, $this->providers)) {
+        if (!array_key_exists($name, $this->factories)) {
             throw new Exceptions\UnknownService($name);
         }
 
         $this->recordDependency($name);
 
-        if (array_key_exists("provider", $this->providers[$name])) {
-            return $this->providers[$name]["provider"];
+        if (array_key_exists($name, $this->instances)) {
+            return $this->instances[$name];
         }
 
         return $this->initializeProvider($name);
     }
 
     protected function initializeProvider($name) {
-        if ($this->providers[$name]["in_construction"]) {
+        if (array_key_exists($name, $this->in_construction)) {
             throw new Exceptions\UnresolvableDependency($name);
         } 
 
         // This is for detection of unresolvable dependencies.
-        $this->providers[$name]["in_construction"] = true;
+        $this->in_construction[$name] = true;
 
         $token = $this->recordDependenciesInternal();
 
-        $factory = $this->providers[$name]["factory"];
-        $provider = $factory($this);
-        $this->providers[$name]["provider"] = $provider;
+        $factory = $this->factories[$name];
+        $instance = $factory($this);
+        $this->instances[$name] = $instance;
 
         // Dependencies of this provider
         $deps = $this->getDependencyRecordInternal($token);
-        $this->providers[$name]["dependencies"] = $deps;
+        $this->dependencies[$name] = $deps;
 
         // Add this providers as reverse dependency to all it's
         // dependencies
         foreach ($deps as $dep) {
-            $this->providers[$dep]["reverse_dependencies"][] = $name;
+            $this->reverse_deps[$dep][] = $name;
         }
 
         // Track every provider, that depends on this provider
-        $this->providers[$name]["reverse_dependencies"] = array();
+        $this->reverse_deps[$name] = array();
 
-        $this->providers[$name]["in_construction"] = false;
+        unset($this->in_construction[$name]);
 
-        return $provider;
+        return $instance;
     }
 
-    static protected function refreshDependentProviders(&$providers, $name) {
-        assert(array_key_exists($name, $providers));
+    protected function refreshProvider($name) {
+        assert(array_key_exists($name, $this->reverse_deps));
  
-        foreach ($providers[$name]["reverse_dependencies"] as $dep) {
-            self::refreshDependentProviders($providers, $dep);
+        foreach ($this->reverse_deps[$name] as $dep) {
+            $this->refreshProvider($dep);
         }
-
-        $providers[$name] = array( "factory" => $providers[$name]["factory"]
-                                 , "in_construction" => false
-                                 , "dependencies" => array()
-                                 , "reverse_dependencies" => array()
-                                 );
+       
+        unset($this->instances[$name]);
+        $this->dependencies[$name] = array();
+        $this->reverse_deps[$name] = array();
     }
 
     /**
@@ -291,7 +291,7 @@ class Src {
      */
     protected function providerNames($namespace = null) {
         // TODO: maybe cache that stuff.
-        $names = array_keys($this->providers);
+        $names = array_keys($this->factories);
         if (!$namespace) {
             return $names;
         }
