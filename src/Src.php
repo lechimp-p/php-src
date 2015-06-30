@@ -138,7 +138,7 @@ class Src {
      * @return  Src
      */
     public function defaultFactory(Closure $factory) {
-        return $this->newSrc( $this->providers
+        return $this->newSrc( array()
                             , $factory);
     }
 
@@ -148,6 +148,9 @@ class Src {
      *********************/
     protected $providers = array();
     protected $default_factory = null;
+
+    // For tracking the tree of sources.
+    protected $ancestor = null;
     
     // For recording of dependencies
     protected $records = array();
@@ -156,20 +159,30 @@ class Src {
 
     // For construction:
 
-    public function __construct( array &$providers = null
-                               , Closure $default_factory = null) {
-        if ($providers) {
-            $this->providers = $providers;
-        }
-        if ($default_factory) {
-            $this->default_factory = $default_factory;
+    public function __construct( Src $ancestor = null
+                               , array $new_providers = array() 
+                               , Closure $new_default_factory = null) {
+        $this->ancestor = $ancestor;
+
+        $new_provider_names = array_keys($new_providers);
+        assert(count($new_provider_names) <= 1);
+
+        $this->providers = array_merge( $ancestor ? $ancestor->providers : array()
+                                      , $new_providers);
+
+        $this->default_factory = $new_default_factory
+                               ? $new_default_factory
+                               : ($ancestor ? $ancestor->default_factory : null);
+
+        if (!empty($new_provider_names)) {
+            self::refreshDependentProviders($this->providers, $new_provider_names[0]);
         }
     }
 
-    protected function newSrc( array &$providers
-                             , $default_factory) {
-        assert($default_factory instanceof Closure || $default_factory === null);
-        return new Src($providers, $default_factory);
+    // For overloading the construction of new sources in derived classes.
+    protected function newSrc( array $new_providers = array()
+                             , Closure $new_default_factory = null) {
+        return new Src($this, $new_providers, $new_default_factory);
     }
 
     // For providers: 
@@ -178,18 +191,22 @@ class Src {
     // to use the same logic for services and factories.
 
     protected function registerProvider($name, Callable $factory) {
-        $providers = array_merge(array(), $this->providers); // shallow copy    
-
-        if (array_key_exists($name, $providers)) {
-            self::refreshDependentProviders($providers, $name);
+        if (array_key_exists($name, $this->providers)) {
+            $reverse_dependencies = $this->providers[$name]["reverse_dependencies"];
         }
         else {
-            $providers[$name] = array( "in_construction" => false
-                                     , "dependencies" => array()
-                                     , "reverse_dependencies" => array()
-                                     );
+            $reverse_dependencies = array();
         }
-        $providers[$name]["factory"] = $factory;
+
+        return $this->newSrc(array
+                    ( $name => array
+                        ( "in_construction" => false
+                        , "dependencies" => array()
+                        , "reverse_dependencies" => $reverse_dependencies
+                        , "factory" => $factory
+                        )
+                    ));
+
         return $this->newSrc( $providers
                             , $this->default_factory);
     }
