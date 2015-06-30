@@ -75,15 +75,18 @@ class Src {
     }
 
     /**
-     * Get the dependencies of a service.
+     * Get the dependencies of a service or a factory.
      *
-     * As a sideeffect will construct the service in question if it is not
-     * constructed yet.
+     * Prefix service names with "service::" and factories with "factory::".
+     *
+     * As a sideeffect will construct the service or factory in question if 
+     * it is not constructed yet.
      *
      * Returns a list of direct dependencies only.
      *
      * @param   string      $name
      * @throws  Exceptions\UnknownService
+     * @throws  Exceptions\UnknownClass
      * @return  string[]
      */
     public function dependenciesOf($name) {
