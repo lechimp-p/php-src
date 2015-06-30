@@ -287,6 +287,7 @@ class Src {
      * in that namespace.
      *
      * @param   string  $namespace
+     * @return  string[]
      */
     protected function providerNames($namespace = null) {
         // TODO: maybe cache that stuff.
