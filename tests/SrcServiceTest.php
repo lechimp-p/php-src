@@ -184,4 +184,24 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         $deps = $src->dependenciesOf("service::baz");
         $this->assertEquals($deps, array("service::bar"));
     }
+
+    public function testServicesNull() {
+        $this->assertEquals(array(), $this->src->services());
+    }
+
+    public function testServices() {
+        $src = $this->src
+        ->service("foo", function($src) {
+        })
+        ->service("bar", function($src) {
+        })
+        ->service("baz", function($src) {
+        });
+
+        $services = $src->services();
+        $this->assertCount(3, $services);
+        $this->assertContains("foo", $services);
+        $this->assertContains("bar", $services);
+        $this->assertContains("baz", $services);
+    }
 }

@@ -75,6 +75,16 @@ class Src {
     }
 
     /**
+     * Get the names of all services known to this source.
+     *
+     * @return  string[]
+     */
+    public function services() {
+        return $this->providerNames("service");
+    }
+    
+
+    /**
      * Request or register a factory.
      *
      * A factory is a function that creates new instances of a class.
@@ -268,6 +278,31 @@ class Src {
                                 , "dependencies" => array()
                                 , "reverse_dependencies" => array()
                                 );
+    }
+
+    /**
+     * Get the names of all known providers.
+     *
+     * If namespace param is given, will only return the providers
+     * in that namespace.
+     *
+     * @param   string  $namespace
+     */
+    protected function providerNames($namespace = null) {
+        // TODO: maybe cache that stuff.
+        $names = array_keys($this->providers);
+        if (!$namespace) {
+            return $names;
+        }
+        
+        $filtered = array();
+        foreach ($names as $name) {
+            $matches = array();
+            if (preg_match("/^$namespace::(.*)$/", $name, $matches)) {
+                $filtered[] = $matches[1];
+            }
+        }
+        return $filtered;
     }
 
     // For services:   
