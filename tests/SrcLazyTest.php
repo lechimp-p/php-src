@@ -9,7 +9,7 @@
  * a copy of the along with the code.
  */
 
-class SrcServiceTest extends PHPUnit_Framework_TestCase {
+class SrcLazyTest extends PHPUnit_Framework_TestCase {
     public function setUp() {
         $this->src = new Lechimp\Src\Src();
     }
@@ -20,7 +20,8 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return "bar";
         });
 
-        $this->assertEquals("bar", $src->service("foo"));
+        $foo = $src->lazy("foo");
+        $this->assertEquals("bar", $foo());
     }
 
     public function testResolvesCorrectly() {
@@ -32,8 +33,11 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return "bar";
         });
 
-        $this->assertEquals("foo", $src->service("foo"));
-        $this->assertEquals("bar", $src->service("bar"));
+        $foo = $src->lazy("foo");
+        $bar = $src->lazy("bar");
+
+        $this->assertEquals("foo", $foo());
+        $this->assertEquals("bar", $bar());
     }
 
     public function testPassesSrc() {
@@ -44,7 +48,9 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             $tmp["executed"] = true;
         });
         $tmp["src"] = $src;
-        $src->service("foo");
+
+        $foo = $src->lazy("foo");
+        $foo();
         $this->assertTrue($tmp["executed"]);
     }
 
@@ -53,16 +59,17 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         ->service("foo", function($src) {
             return new StdClass();
         });
-        $one = $src->service("foo");
-        $two= $src->service("foo");
-        $this->assertSame($one, $two);
+        $one = $src->lazy("foo");
+        $two = $src->lazy("foo");
+        $this->assertSame($one(), $two());
     }
 
     /**
      * @expectedException Lechimp\Src\Exceptions\UnknownService
      */
     public function testUnknownService() {
-        $this->src->service("foo"); 
+        $foo = $this->src->lazy("foo"); 
+        $foo(); 
     }
 
     /**
@@ -76,42 +83,45 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         ->service("bar", function($src) {
             $src->service("foo");
         });
-        $src->service("foo");
+        $foo = $src->lazy("foo");
+        $foo();
     }
 
-
-    public function testIsImmutable() {
+    public function testIsLazy() {
         $src = $this->src
         ->service("foo", function($src) {
-            return "foo";
+            $src->service("bar");
+        })
+        ->service("bar", function($src) {
+            $src->service("foo");
         });
-
-        $this->assertNotSame($src, $this->src);
-        try {
-            $this->src->service("foo");
-            $raised = false;
-        }
-        catch (Lechimp\Src\Exceptions\UnknownService $e) {
-            $raised = true;
-        }
-        $this->assertTrue($raised);
+        $foo = $src->lazy("foo");
+        // This would have raised if this was not lazy,
+        // as wittnessed by testUnresolvableDependency.
+        $this->assertTrue(true);
     }
 
-    public function testIdenticalServiceAfterSrcUpdate() {
+
+    // This tests only serves documentary purpose, see documentation
+    // of Src::lazy.
+    public function testNoIdenticalServiceRequiredAfterSrcUpdate() {
         $src = $this->src
         ->service("foo", function($src) {
             return new StdClass;
         });
 
-        $one = $src->service("foo");
+        $one = $src->lazy("foo");
 
         $src2 = $src
         ->service("bar", function($src) {
             return "bar";
         });
 
-        $two = $src2->service("foo");
-        $this->assertSame($one, $two);
+        $two = $src2->lazy("foo");
+        // This assertion holds when using service, but not when
+        // using lazy.
+        //$this->assertSame($one(), $two());
+        $this->assertTrue(true); // As this is a non requirement.
     }
 
     public function testDifferentServiceAfterUpdate() {
@@ -119,16 +129,16 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         ->service("foo", function ($src) {
             return "foo";
         });
-        $foo = $src->service("foo");
+        $foo = $src->lazy("foo");
         
         $src = $src
         ->service("foo", function ($src) {
             return "FOO";
         });
-        $foo2 = $src->service("foo");
+        $foo2 = $src->lazy("foo");
    
-        $this->assertEquals($foo, "foo");
-        $this->assertEquals($foo2, "FOO");
+        $this->assertEquals($foo(), "foo");
+        $this->assertEquals($foo2(), "FOO");
     }
 
     public function testTransitiveDifferentServiceAfterUpdate() {
@@ -142,15 +152,15 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         ->service("foobar", function($src) {
             return $src->service("foo").$src->service("bar");
         });
-        $foobar = $src->service("foobar");
-        $this->assertEquals($foobar, "foobar");
+        $foobar = $src->lazy("foobar");
+        $this->assertEquals($foobar(), "foobar");
         
         $src = $src
         ->service("foo", function($src) {
             return "FOO";
         });
-        $foobar2 = $src->service("foobar");
-        $this->assertEquals($foobar2, "FOObar");
+        $foobar2 = $src->lazy("foobar");
+        $this->assertEquals($foobar2(), "FOObar");
     }
 
     public function testGetDependenciesOf() {
@@ -162,8 +172,8 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
             return "bar";
         })
         ->service("foobar", function($src) {
-            $src->service("foo");
-            $src->service("bar");
+            $src->lazy("foo");
+            $src->lazy("bar");
         });
         $deps = $src->dependenciesOf("service::foobar");
         $this->assertContains("service::foo", $deps);
@@ -176,32 +186,12 @@ class SrcServiceTest extends PHPUnit_Framework_TestCase {
         ->service("foo", function($src) {
         })
         ->service("bar", function($src) {
-            $src->service("foo");
+            $src->lazy("foo");
         })
         ->service("baz", function($src) {
-            $src->service("bar");
+            $src->lazy("bar");
         });
         $deps = $src->dependenciesOf("service::baz");
         $this->assertEquals($deps, array("service::bar"));
-    }
-
-    public function testServicesNull() {
-        $this->assertEquals(array(), $this->src->services());
-    }
-
-    public function testServices() {
-        $src = $this->src
-        ->service("foo", function($src) {
-        })
-        ->service("bar", function($src) {
-        })
-        ->service("baz", function($src) {
-        });
-
-        $services = $src->services();
-        $this->assertCount(3, $services);
-        $this->assertContains("foo", $services);
-        $this->assertContains("bar", $services);
-        $this->assertContains("baz", $services);
     }
 }
