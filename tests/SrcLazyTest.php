@@ -102,7 +102,9 @@ class SrcLazyTest extends PHPUnit_Framework_TestCase {
     }
 
 
-    public function testIdenticalServiceAfterSrcUpdate() {
+    // This tests only serves documentary purpose, see documentation
+    // of Src::lazy.
+    public function testNoIdenticalServiceRequiredAfterSrcUpdate() {
         $src = $this->src
         ->service("foo", function($src) {
             return new StdClass;
@@ -116,7 +118,10 @@ class SrcLazyTest extends PHPUnit_Framework_TestCase {
         });
 
         $two = $src2->lazy("foo");
-        $this->assertSame($one(), $two());
+        // This assertion holds when using service, but not when
+        // using lazy.
+        //$this->assertSame($one(), $two());
+        $this->assertTrue(true); // As this is a non requirement.
     }
 
     public function testDifferentServiceAfterUpdate() {

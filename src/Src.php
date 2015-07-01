@@ -74,6 +74,10 @@ class Src {
      * anonymus function that will return the service at a later time.
      * This could be used for service dependencies that will not be needed
      * in every case.
+     *
+     * When using lazy, you might construct more instances of a service
+     * than you intend.
+     * (see SrcLazyTest::testNoIdenticalServiceRequiredAfterSrcUpdate)
      * 
      * @param   string          $name
      * @throws  InvalidArgumentException    When $name == "Src"
