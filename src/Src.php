@@ -17,26 +17,38 @@ use InvalidArgumentException;
 /**
  * Source for services and new objects.
  *
- * Never keep a reference to a Src-object that was not requested
- * from the source object via $src->service("Src").
+ * A source contains services and factories for object, which are both subsummed 
+ * under the name provider. One can register services and factories by name and 
+ * later request them.
+ *
+ * The source is an immutable structure, which means that updates are non
+ * distructive but rather result in a new source object. This simplifies the
+ * reasoning over the code the source is used in. 
  *
  */
 class Src {
     /**
-     * Request or register a factory for a service.
+     * Request a service or register a factory for a service.
      *
-     * A service is an object that only exists once in the process. It is
-     * initialized on the first request for the service and is only initialized
-     * once. 
+     * A service is an object that provides, well, some service to an app.
+     * Think of database connections, an event system etc. The source tries to
+     * construct as little instances of the service as possible.
      *
-     * If second argument is omitted, requests a service. If second argument is
-     * set, expects a closure that takes the source itself as the first argument.
+     * If second argument is omitted, requests a service. Returns a service
+     * object then. 
      *
-     * Returns the service if second argument is omitted. Returns an updated
-     * version of itself is second argument is used, where the update is non
-     * destructive to the previous version of the source. This makes it possible
-     * to give the source to someone else without worrying that he modifies it
-     * in an odd way.
+     * If second argument is set, expects a closure that takes the source itself
+     * as the first argument. The closure is expected to construct a service 
+     * object, where every dependency of the service has to be requested from the
+     * source when the service is constructed.
+     *
+     * Returns an updated version of the source then, which is non destructive
+     * to the previous version of the source.
+     *
+     * If a service with a similar name was registered before, overwrites the
+     * previously registered service. If there already exists an instance of the
+     * service, the source discards that instances and the instances of all other
+     * providers that depend on that service.
      *
      * @param   string          $name
      * @param   Closure|null    $factory 
