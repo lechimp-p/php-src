@@ -355,7 +355,7 @@ class Src {
 
     protected function registerFactory($name, $factory) {
         $name = "factory::$name";
-        return $this->registerProviders(array($name => function($src) use ($factory){
+        return $this->registerProviders(array($name => function($src) use ($factory) {
             return function() use ($src, $factory) {
                 $args = array_merge(array($src), func_get_args());
                 return call_user_func_array($factory, $args);
