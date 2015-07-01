@@ -230,8 +230,12 @@ class Src {
     // A provider abstracts over services and factories. This makes it possible
     // to use the same logic for services and factories.
 
-    protected function registerProvider($name, Callable $factory) {
-        return $this->newSrc(array($name => $factory));
+    protected function registerProviders($factories) {
+        foreach ($factories as $name => $factory) {
+            assert(is_string($name));
+            assert($factory instanceof Closure);
+        }
+        return $this->newSrc($factories);
     }
   
     protected function requestProvider($name) {
@@ -322,7 +326,7 @@ class Src {
 
     protected function registerService($name, Callable $factory) {
         $name = "service::$name";
-        return $this->registerProvider($name, $factory);
+        return $this->registerProviders(array($name  => $factory));
     }
 
 
@@ -347,12 +351,12 @@ class Src {
 
     protected function registerFactory($name, $factory) {
         $name = "factory::$name";
-        return $this->registerProvider($name, function($src) use ($factory){
+        return $this->registerProviders(array($name => function($src) use ($factory){
             return function() use ($src, $factory) {
                 $args = array_merge(array($src), func_get_args());
                 return call_user_func_array($factory, $args);
             };
-        });
+        }));
     }
 
     protected function getDefaultFactory($name) {
