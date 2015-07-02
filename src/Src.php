@@ -312,7 +312,7 @@ class Src {
     protected function providerNames($namespace = null) {
         // TODO: maybe cache that stuff.
         $names = array_keys($this->factories);
-        if (!$namespace) {
+        if ($namespace === null) {
             return $names;
         }
         
