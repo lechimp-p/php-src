@@ -398,9 +398,7 @@ class Src {
      * @param Internal\RecordToken      $token
      */
     protected function pauseDependencyRecord(Internal\RecordToken $token) {
-        if (!array_key_exists($token->value(), $this->records)) {
-            throw new InvalidArgumentException("Unknown, paused or already used token supplied.");
-        }
+        $this->checkTokenExistsInRecords($token);
 
         $this->paused_records[$token->value()] = $this->records[$token->value()];
         unset($this->records[$token->value()]);
@@ -412,9 +410,7 @@ class Src {
      * @param Internal\RecordToken      $token
      */
     protected function resumeDependencyRecord(Internal\RecordToken $token) {
-        if (!array_key_exists($token->value(), $this->paused_records)) {
-            throw new InvalidArgumentException("Unknown, resumed or already used token supplied.");
-        }
+        $this->checkTokenExistsInPausedRecords($token);
 
         $this->records[$token->value()] = $this->paused_records[$token->value()];
         unset($this->paused_records[$token->value()]);
@@ -430,14 +426,26 @@ class Src {
      * @return  string[]
      */
     protected function getDependencyRecord(Internal\RecordToken $token) {
-        if (!array_key_exists($token->value(), $this->records)) {
-            throw new InvalidArgumentException("Unknown or already used token supplied.");
-        }
+        $this->checkTokenExistsInRecords($token);
 
         $res = $this->records[$token->value()];
         unset($this->records[$token->value()]);
 
         return $res;
+    }
+
+    // Check for existence of token in records
+    protected function checkTokenExistsInRecords($token) { 
+        if (!array_key_exists($token->value(), $this->records)) {
+            throw new InvalidArgumentException("Unknown, paused or already used token supplied.");
+        }
+    }
+
+    // Check for existence of token in records
+    protected function checkTokenExistsInPausedRecords($token) { 
+        if (!array_key_exists($token->value(), $this->paused_records)) {
+            throw new InvalidArgumentException("Unknown, resumed or already used token supplied.");
+        }
     }
 
     // Add a provider to all current dependency records.
