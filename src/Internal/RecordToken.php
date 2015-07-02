@@ -19,7 +19,7 @@ final class RecordToken {
     private static $count = 0;
     private $value; 
 
-    static public function get() {
+    public static function get() {
         return new RecordToken(self::$count++); 
     }
 
